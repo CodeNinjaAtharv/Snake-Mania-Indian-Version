@@ -1,0 +1,3254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Desi Snake Feast - Royal Quest Edition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&family=Yatra+One&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #2c0e0e;
+            font-family: 'Poppins', sans-serif;
+            overflow: hidden;
+            touch-action: none; /* Critical for mobile to prevent scrolling */
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* --- UI LAYOUT --- */
+        #ui-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* --- HUD (In-Game) --- */
+        .hud-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 20px;
+            width: 100%;
+            box-sizing: border-box;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .hud-left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            text-shadow: 2px 2px 0px #000;
+            color: white;
+            pointer-events: none;
+        }
+
+        #score-board span { color: #fff; }
+        #high-score-board span { color: #ffcc00; }
+        #coin-board span { color: #ffd700; }
+        #fps-board { font-size: 12px; color: #0f0; margin-top: 5px; opacity: 0.7; }
+
+        /* Leaderboard */
+        #leaderboard {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 10px;
+            width: 180px;
+            color: white;
+            pointer-events: none;
+            font-size: 13px;
+        }
+
+        #leaderboard h3 {
+            margin: 0 0 8px 0;
+            text-align: center;
+            color: #ff9933;
+            font-size: 14px;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 5px;
+        }
+
+        .lb-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+            padding: 3px 6px;
+            border-radius: 4px;
+        }
+
+        .lb-row.player-row {
+            background: rgba(255, 153, 51, 0.3);
+            border: 1px solid rgba(255, 153, 51, 0.5);
+            font-weight: bold;
+        }
+
+        .lb-rank { width: 20px; color: #aaa; }
+        .lb-name { flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 5px; }
+        .lb-score { text-align: right; color: #fff; }
+
+        /* --- SHARED MODAL STYLES --- */
+        #gameOverScreen, #settingsScreen, #skinScreen, #spinWheelScreen, #questScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #3e0a0a 0%, #1a0505 100%);
+            padding: 25px;
+            border-radius: 24px;
+            text-align: center;
+            border: 2px solid #ffd700;
+            pointer-events: auto;
+            min-width: 320px;
+            box-shadow: 0 0 0 4px #800000, 0 20px 50px rgba(0,0,0,0.8);
+            color: #ffd700;
+            max-height: 90vh;
+            overflow-y: auto;
+            z-index: 30;
+        }
+        
+        /* --- LOBBY UI --- */
+        #startScreen {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            pointer-events: auto;
+            z-index: 20;
+            box-sizing: border-box;
+            padding: 20px;
+            overflow-y: auto; 
+            background-image: 
+                radial-gradient(#ffcc00 1px, transparent 1px),
+                radial-gradient(#ffcc00 1px, transparent 1px);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+            background-color: rgba(40, 10, 10, 0.85);
+        }
+
+        .lobby-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            flex-shrink: 0;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 15px;
+            border-bottom: 2px solid #ffd700;
+            margin-bottom: 10px;
+        }
+
+        .game-title {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .game-title h1 {
+            font-family: 'Yatra One', cursive; 
+            font-size: 42px;
+            line-height: 1;
+            margin: 0;
+            color: #ff9933;
+            text-transform: uppercase;
+            font-weight: 400;
+            letter-spacing: 1px;
+            text-shadow: 
+                2px 2px 0px #fff, 
+                4px 4px 0px #138808,
+                6px 6px 10px rgba(0,0,0,0.8);
+        }
+        .game-title span {
+            font-family: 'Yatra One', cursive;
+            font-size: 16px;
+            color: #ffd700;
+            letter-spacing: 2px;
+            font-weight: 400;
+            text-transform: uppercase;
+            margin-left: 4px;
+        }
+
+        .lobby-currency {
+            background: linear-gradient(to bottom, #4a0e0e, #2a0505);
+            border: 2px solid #b8860b;
+            padding: 8px 20px;
+            border-radius: 50px;
+            display: flex;
+            gap: 20px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+        .curr-item { display: flex; flex-direction: column; align-items: flex-end; }
+        .curr-label { font-size: 10px; color: #ffcc99; text-transform: uppercase; letter-spacing: 1px; }
+        .curr-val { font-size: 18px; font-weight: bold; color: #ffd700; line-height: 1; font-family: 'Yatra One', cursive; }
+        .curr-val.score { color: #fff; }
+
+        .lobby-content-wrapper {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .lobby-left-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            position: relative;
+        }
+        .lobby-left-col::after {
+            content: ''; position: absolute; top: -5px; right: -5px; bottom: -5px; left: -5px;
+            border: 2px solid transparent;
+            border-radius: 22px;
+            background: linear-gradient(45deg, #ffd700, transparent, #ffd700) border-box;
+            -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: destination-out;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        .lobby-right-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .player-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #2a0505;
+            padding: 10px 20px;
+            border-radius: 50px;
+            border: 2px solid #d4af37;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        #playerNameInput {
+            background: transparent;
+            border: none;
+            color: #ffeb3b;
+            font-family: 'Poppins', sans-serif;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            width: 150px;
+            outline: none;
+            text-shadow: 1px 1px 2px #000;
+        }
+        #playerNameInput:focus { border-bottom: 2px solid #ff9933; }
+        .edit-icon { opacity: 0.8; width: 16px; height: 16px; fill: #ffd700; }
+
+        .map-selector { display: flex; gap: 20px; }
+        .map-card {
+            width: 140px; height: 180px; border-radius: 16px; position: relative;
+            cursor: pointer; overflow: hidden; border: 4px solid #5a3a2a;
+            transition: transform 0.2s, border-color 0.2s; box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            /* Default Gradient Fallback */
+            background: linear-gradient(135deg, #333, #111);
+        }
+        /* Specific Fallbacks */
+        .map-card[data-map="gateway"] { background: linear-gradient(to bottom, #ff9933, #800000); }
+        .map-card[data-map="himalaya"] { background: linear-gradient(to bottom, #87CEEB, #F0F8FF); }
+
+        .map-card img { 
+            width: 100%; height: 100%; object-fit: cover; opacity: 0.6; 
+            transition: opacity 0.3s; filter: sepia(30%); 
+            display: block; /* Ensures it behaves correctly */
+        }
+        .map-card:hover { transform: translateY(-5px); }
+        .map-card.active { border-color: #ffd700; transform: scale(1.05); box-shadow: 0 0 20px rgba(255, 215, 0, 0.6); }
+        .map-card.active img { opacity: 1; filter: sepia(0%); }
+        
+        .map-label {
+            position: absolute; bottom: 0; left: 0; width: 100%;
+            background: linear-gradient(to top, #4a0e0e, transparent);
+            padding: 25px 10px 10px 10px; color: #ffd700; font-weight: bold;
+            text-align: center; text-shadow: 0 2px 4px black; box-sizing: border-box; 
+            font-family: 'Yatra One', cursive; letter-spacing: 1px;
+        }
+
+        .controls-group { display: flex; flex-direction: column; gap: 15px; align-items: center; }
+
+        .control-toggle {
+            display: flex; background: #2a0505; padding: 5px; border-radius: 30px;
+            border: 1px solid #d4af37; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
+        }
+        .toggle-opt {
+            padding: 10px 25px; border-radius: 25px; color: #bfa3a3; cursor: pointer;
+            font-size: 14px; font-weight: 600; transition: all 0.3s; text-transform: uppercase;
+        }
+        .toggle-opt.active {
+            background: linear-gradient(135deg, #ff9933, #e65100); color: #2a0505;
+            box-shadow: 0 2px 10px rgba(255, 153, 51, 0.4); font-weight: 800;
+        }
+        .mode-btn.active { background: linear-gradient(135deg, #ffd700, #ff8c00); color: #2a0505; }
+
+        .footer-actions { display: flex; justify-content: space-between; align-items: center; width: 100%; padding-top: 10px; }
+        .menu-grid { display: flex; gap: 15px; }
+
+        .menu-btn {
+            width: 65px; height: 65px; border-radius: 12px; border: 2px solid #5a3a2a;
+            background: linear-gradient(145deg, #3e0a0a, #220505); color: #d4af37;
+            font-size: 10px; display: flex; flex-direction: column; align-items: center;
+            justify-content: center; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+            transition: transform 0.1s; gap: 4px; position: relative; overflow: hidden;
+            font-weight: bold;
+        }
+        .menu-btn::before {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1), transparent); pointer-events: none;
+        }
+        .menu-btn:active { transform: scale(0.95); }
+        .menu-btn svg { width: 26px; height: 26px; fill: currentColor; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }
+        
+        .menu-btn.gold { border-color: #ffd700; color: #ffd700; }
+        .menu-btn.purple { border-color: #b04ef0; color: #e0aaef; }
+        .menu-btn.blue { border-color: #00bcd4; color: #80deea; }
+
+        .play-btn-large {
+            padding: 15px 60px; font-size: 26px; font-family: 'Yatra One', cursive;
+            font-weight: 400; text-transform: uppercase; color: #fff;
+            background: linear-gradient(135deg, #138808 0%, #064203 100%);
+            border: 3px solid #ffd700; border-radius: 50px; cursor: pointer;
+            box-shadow: 0 0 0 4px #064203, 0 10px 30px rgba(0,0,0,0.6);
+            transition: transform 0.2s, box-shadow 0.2s; letter-spacing: 2px;
+        }
+        .play-btn-large:hover { 
+            transform: translateY(-3px); 
+            box-shadow: 0 0 0 4px #064203, 0 15px 40px rgba(19, 136, 8, 0.4); 
+            background: linear-gradient(135deg, #1aa30b 0%, #0b5e05 100%);
+        }
+        .play-btn-large:active { transform: translateY(2px); }
+
+        /* --- MOBILE LANDSCAPE FIX --- */
+        @media (max-height: 500px) and (orientation: landscape) {
+            #startScreen { padding: 10px 40px; }
+            .lobby-header { padding: 5px 15px; margin-bottom: 5px; }
+            .game-title h1 { font-size: 24px; }
+            .lobby-currency { padding: 4px 15px; }
+            .curr-val { font-size: 16px; }
+            .lobby-content-wrapper { flex-direction: row; align-items: center; justify-content: center; gap: 40px; }
+            .lobby-left-col { gap: 10px; padding: 10px; }
+            .map-card { width: 100px; height: 130px; }
+            .lobby-right-col { width: auto; gap: 10px; }
+            .controls-group { flex-direction: row; }
+            .toggle-opt { padding: 6px 15px; font-size: 12px; }
+            .footer-actions { flex-direction: column-reverse; gap: 10px; width: auto; }
+            .menu-grid { gap: 10px; }
+            .menu-btn { width: 45px; height: 45px; }
+            .menu-btn svg { width: 20px; height: 20px; }
+            .play-btn-large { padding: 10px 40px; font-size: 20px; }
+            .hud-top { padding: 10px 20px; }
+            #leaderboard { width: 140px; padding: 6px 8px; }
+            #leaderboard h3 { font-size: 12px; margin-bottom: 4px; }
+            .lb-row { font-size: 11px; padding: 2px; }
+            #mini-map { width: 80px !important; height: 80px !important; bottom: 10px; right: 20px; }
+            .hud-left-panel { font-size: 14px; gap: 2px; }
+            #joystick-container { width: 110px; height: 110px; bottom: 15px; left: 15px; }
+            #joystick-knob { width: 40px; height: 40px; }
+            
+            /* <<< ANDROID/MOBILE BUTTON SIZES (LANDSCAPE) >>> */
+            /* This section specifically targets mobile landscape mode */
+            #actions-container { bottom: 15px !important; gap: 10px !important; }
+            
+            /* Make ability buttons slightly smaller to fit vertically */
+            .ability-btn { width: 45px !important; height: 45px !important; }
+            
+            /* Keep boost button slightly larger than abilities */
+            #boost-btn { width: 45px !important; height: 45px !important; }
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #ff9933, #e65100); border: 2px solid #b8860b;
+            padding: 12px 30px; color: #2a0505; font-size: 16px; border-radius: 50px;
+            cursor: pointer; font-weight: 800; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transition: transform 0.1s; margin-top: 10px; width: 100%; margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        .btn:active { transform: scale(0.95); }
+
+        .btn-red { background: linear-gradient(135deg, #d32f2f, #b71c1c); color: white; border-color: #ff9933; }
+        .btn-blue { background: linear-gradient(135deg, #0277bd, #01579b); color: white; border-color: #4fc3f7; }
+        .btn-purple { background: linear-gradient(135deg, #7b1fa2, #4a148c); color: white; border-color: #e040fb; }
+        .btn-gold { background: linear-gradient(135deg, #ffd700, #ff8c00); color: #2a0505; border-color: #fff; }
+        .btn-disabled { background: #444; cursor: not-allowed; box-shadow: none; color: #888; border-color: #555; }
+        .btn-green { background: linear-gradient(135deg, #43a047, #2e7d32); color: white; border-color: #66bb6a; }
+
+        h1 { color: #ff9933; margin: 0 0 10px 0; font-size: 28px; text-transform: uppercase; letter-spacing: 1px; font-family: 'Yatra One', cursive; text-shadow: 2px 2px 0 #000; }
+        h2 { color: #138808; margin: 0 0 15px 0; font-size: 20px; font-weight: bold; }
+        p { color: #eee; margin-bottom: 15px; font-size: 14px; line-height: 1.4; }
+
+        .toggle-row {
+            display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;
+            background: rgba(0, 0, 0, 0.3); padding: 15px; border-radius: 10px; border: 1px solid #5a3a2a;
+        }
+
+        .input-group { margin-bottom: 15px; text-align: left; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 10px; }
+        .input-group label { font-size: 12px; color: #ff9933; display: block; margin-bottom: 5px; font-weight: bold; }
+        .url-input {
+            width: 100%; padding: 8px; background: rgba(0,0,0,0.4); border: 1px solid #555; color: #fff;
+            border-radius: 5px; font-family: monospace; box-sizing: border-box;
+        }
+        
+        input[type="file"]::file-selector-button {
+            border: 1px solid #ff9933; background: #2c0e0e; color: #ff9933;
+            padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-right: 10px;
+        }
+
+        .hidden { display: none !important; pointer-events: none; }
+        #mini-map { position: absolute; bottom: 20px; right: 20px; width: 120px; height: 120px; background: rgba(0,0,0,0.5); border: 2px solid #d4af37; border-radius: 10px; pointer-events: none; }
+        #joystick-container { position: absolute; bottom: 30px; left: 30px; width: 140px; height: 140px; background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(255, 153, 51, 0.5); border-radius: 50%; display: none; pointer-events: auto; touch-action: none; }
+        #joystick-knob { position: absolute; top: 50%; left: 50%; width: 50px; height: 50px; background: radial-gradient(circle, #ff9933, #d65c00); border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 10px rgba(0,0,0,0.5); border: 2px solid #fff; }
+        .section-header { color: #bfa3a3; font-size: 14px; margin-bottom: 10px; border-bottom: 1px solid #5a3a2a; padding-bottom: 5px; text-align: left; }
+
+        /* --- QUEST SCREEN STYLES --- */
+        #questList { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; max-height: 300px; overflow-y: auto; }
+        .quest-item { background: rgba(0,0,0,0.2); border: 1px solid #5a3a2a; border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .quest-item.completed { border-color: #138808; background: rgba(19, 136, 8, 0.1); }
+        .quest-info { text-align: left; }
+        .quest-desc { font-size: 14px; color: #fff; }
+        .quest-reward { font-size: 12px; color: #ffd700; font-weight: bold; }
+        .quest-btn { padding: 5px 10px; font-size: 12px; border-radius: 5px; border: none; cursor: pointer; width: 70px; }
+        .btn-claim { background: linear-gradient(to bottom, #4caf50, #2e7d32); color: white; font-weight: bold; border: 1px solid #fff; }
+        .btn-done { background: #333; color: #888; cursor: default; }
+        .btn-prog { background: transparent; color: #aaa; border: 1px solid #555; }
+
+        /* --- SPIN WHEEL STYLES --- */
+        #spinWheelCanvas { margin: 10px auto; border-radius: 50%; box-shadow: 0 0 20px rgba(0,0,0,0.8); border: 8px solid #d4af37; }
+        #spinTimer { color: #ff9933; font-size: 12px; margin-top: 5px; }
+
+        /* --- SHOP LAYOUT --- */
+        #skinScreen { width: 80%; max-width: 800px; height: 80vh; display: flex; flex-direction: column; padding: 0; overflow: hidden; background: #2a0505; }
+        .shop-header { padding: 20px; background: rgba(0,0,0,0.3); border-bottom: 2px solid #d4af37; display: flex; justify-content: space-between; align-items: center; }
+        .shop-header h1 { margin: 0; font-size: 24px; color: #ffd700; }
+        .shop-body { display: flex; flex: 1; overflow: hidden; }
+        .skin-list { flex: 1; padding: 20px; overflow-y: auto; border-right: 1px solid #5a3a2a; background: rgba(0,0,0,0.1); }
+        .skin-preview-panel { flex: 0 0 300px; background: radial-gradient(circle at center, #3e0a0a, #1a0505); padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-left: 1px solid #d4af37; }
+        @media (max-width: 700px) { .shop-body { flex-direction: column-reverse; } .skin-list { border-right: none; border-top: 1px solid #5a3a2a; } .skin-preview-panel { flex: 0 0 250px; border-left: none; } .lobby-header { flex-direction: row; } .map-selector { gap: 10px; } .map-card { width: 110px; height: 140px; } }
+
+        /* SKIN GRID ITEMS */
+        .skin-category { margin-bottom: 20px; }
+        .skin-category h3 { color: #d4af37; font-size: 12px; margin-bottom: 8px; text-align: left; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #5a3a2a; padding-bottom: 2px; }
+        .skin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; }
+        .skin-card { background: rgba(255,255,255,0.05); border: 1px solid #5a3a2a; border-radius: 8px; padding: 10px; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; position: relative; }
+        .skin-card:hover { background: rgba(255,255,255,0.1); border-color: #ff9933; }
+        .skin-card.selected-in-shop { border-color: #ffd700; background: rgba(255, 215, 0, 0.1); box-shadow: 0 0 10px rgba(255,215,0,0.3); }
+        .owned-indicator { position: absolute; top: 5px; right: 5px; width: 8px; height: 8px; background: #0f0; border-radius: 50%; display: none; box-shadow: 0 0 5px #0f0; }
+        .skin-card.owned .owned-indicator { display: block; }
+        .skin-card.owned .skin-price { color: #888; background: transparent; }
+        .skin-preview-icon { width: 40px; height: 40px; border-radius: 50%; margin-bottom: 5px; border: 2px solid rgba(255,255,255,0.2); }
+        .skin-name { font-size: 11px; color: #ddd; margin-bottom: 2px; text-align: center; }
+        .skin-price { font-size: 10px; color: #ffd700; font-weight: bold; background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px; }
+
+        /* PREVIEW PANEL ELEMENTS */
+        #shopPreviewCanvas { background: radial-gradient(circle at center, #222, #000); border: 4px solid #d4af37; border-radius: 10px; margin: 15px 0; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        #previewSkinName { font-size: 22px; color: #ff9933; margin-bottom: 5px; text-transform: uppercase; font-family: 'Yatra One', cursive; }
+        #previewSkinRarity { font-size: 12px; color: #aaa; margin-bottom: 10px; }
+        .text-epic { color: #e040fb !important; text-shadow: 0 0 5px #7b1fa2; }
+        .text-legendary { color: #ffd700 !important; text-shadow: 0 0 5px rgba(255, 215, 0, 0.8); }
+
+        /* Skin Colors for CSS-only elements (Preview) */
+        .preview-default { background: linear-gradient(to right, #ff9933, #fff, #138808); }
+        .preview-red { background: #ff0000; }
+        .preview-black { background: #1a1a1a; }
+        .preview-orange { background: #ff8800; }
+        .preview-purple { background: #800080; }
+        .preview-yellow { background: #ffeb3b; }
+        .preview-green { background: #4caf50; }
+        .preview-pink { background: #e91e63; }
+        .preview-gold { background: radial-gradient(circle, #fff, #ffd700); border-color: #ffd700 !important; }
+        .preview-rangoli { background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); }
+        .preview-tiger { background: repeating-linear-gradient(45deg, #ff9900, #ff9900 5px, #000 5px, #000 10px); }
+        .preview-peacock { background: radial-gradient(circle, #32cd32 30%, #008080 70%); }
+        .preview-kaleidoscope { background: conic-gradient(from 0deg, red, orange, yellow, green, blue, indigo, violet, red); }
+        .preview-legend1 { background: #000; border-color: #00ffff !important; animation: pulse-cyan 1.5s infinite alternate; }
+        .preview-legend2 { background: linear-gradient(135deg, #ff00cc, #333399); border-color: #ff00cc !important; animation: pulse-magenta 1.5s infinite alternate; }
+        .preview-legend3 { background: #000; border-color: #ff0000 !important; animation: pulse-red 1.5s infinite alternate; }
+        .preview-legend4 { background: radial-gradient(circle, #fff, #ffd700); border-color: #ffd700 !important; animation: pulse-gold 1.5s infinite alternate; }
+        
+        /* Animations */
+        @keyframes pulse-cyan { from { box-shadow: 0 0 5px #00ffff; } to { box-shadow: 0 0 10px #00ffff; } }
+        @keyframes pulse-magenta { from { box-shadow: 0 0 5px #ff00cc; } to { box-shadow: 0 0 10px #ff00cc; } }
+        @keyframes pulse-red { from { box-shadow: 0 0 5px #ff0000; } to { box-shadow: 0 0 15px #ff0000; } }
+        @keyframes pulse-gold { from { box-shadow: 0 0 10px #ffd700; } to { box-shadow: 0 0 25px #ffd700, 0 0 10px #fff; } }
+
+        /* Toast */
+        #toast { position: absolute; top: 10%; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, #ff9933, #e65100); color: #2a0505; padding: 10px 25px; border-radius: 20px; border: 2px solid #fff; font-size: 14px; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 100; font-weight: bold; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        
+        #settings-btn-game { pointer-events: auto; background: rgba(40, 10, 10, 0.8); border: 2px solid #ff9933; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.1s; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); z-index: 20; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        #settings-btn-game:active { transform: translateX(-50%) scale(0.9); }
+        #settings-btn-game svg { fill: #ff9933; width: 30px; height: 30px; }
+
+        /* --- ACTION BUTTONS CONTAINER --- */
+        #actions-container {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 25;
+            pointer-events: none; /* Let clicks pass through container to buttons */
+        }
+
+        /* Common Styles for Action Buttons */
+        /* <<< ANDROID/MOBILE BUTTON SIZES (PORTRAIT/DEFAULT) >>> */
+        .action-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            border: 3px solid #fff;
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+            transition: transform 0.1s;
+        }
+        .action-btn:active { transform: scale(0.9); }
+        .action-btn svg { width: 55%; height: 55%; fill: #2a0505; position: relative; z-index: 2; }
+
+        /* Boost Button Specifics */
+        #boost-btn {
+            background: radial-gradient(circle, #FFD700, #ff8c00);
+            width: 45px; height: 45px; /* Slightly larger */
+        }
+        
+        /* Ability Buttons Specifics */
+        .ability-btn {
+            background: radial-gradient(circle, #e0e0e0, #a0a0a0);
+        }
+        .ability-btn.magnet { background: radial-gradient(circle, #ff4081, #c51162); }
+        .ability-btn.shield { background: radial-gradient(circle, #00b0ff, #0091ea); }
+        .ability-btn.magnify { background: radial-gradient(circle, #aa00ff, #4a148c); }
+
+        /* ANALOG COOLDOWN ANIMATION (Wipe Effect) */
+        .ability-btn::after, #boost-btn::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: conic-gradient(rgba(0,0,0,0.7) var(--cooldown, 0%), transparent 0%);
+            border-radius: 50%;
+            z-index: 3;
+            transform: scaleY(-1); /* Flips draw direction to act like a clock */
+            pointer-events: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+    <audio id="bgMusic" loop crossorigin="anonymous"></audio>
+
+    <div id="ui-layer">
+        <!-- In-Game HUD -->
+        <div class="hud-top game-ui hidden">
+            <div class="hud-left-panel">
+                <div id="score-board"><span data-lang-key="score">Score</span>: <span id="scoreVal">0</span></div>
+                <div id="high-score-board"><span data-lang-key="best">Best</span>: <span id="highScoreVal">0</span></div>
+                <div id="fps-board">FPS: <span id="fpsVal">0</span></div>
+                <div id="coin-board"><span data-lang-key="shopCoins">Coins</span>: <span id="coinVal">0</span></div>
+            </div>
+
+            <div id="leaderboard">
+                <h3>Leaderboard</h3>
+                <div id="lb-content"></div>
+            </div>
+        </div>
+
+        <div id="settings-btn-game" onclick="openSettings()" class="hidden">
+            <svg viewBox="0 0 24 24">
+                <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39.96c.22.08.47 0 .59-.22l1.92 3.32c.12-.22.07-.47-.12-.61l-2.03-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
+            </svg>
+        </div>
+
+        <div id="joystick-container">
+            <div id="joystick-knob"></div>
+        </div>
+
+        <!-- NEW ACTIONS CONTAINER (Magnet, Boost, Magnify, Shield) -->
+        <div id="actions-container" class="hidden game-ui">
+            
+            <!-- Magnet (Z) -->
+            <div id="magnet-btn" class="action-btn ability-btn magnet" onmousedown="activateMagnet()" ontouchstart="activateMagnet()">
+                <svg viewBox="0 0 24 24">
+                    <path d="M3 7v6c0 4.97 4.03 9 9 9s9-4.03 9-9V7h-4v6c0 2.76-2.24 5-5 5s-5-2.24-5-5V7H3z"/>
+                    <rect x="3" y="4" width="4" height="3" />
+                    <rect x="17" y="4" width="4" height="3" />
+                </svg>
+            </div>
+
+            <!-- Boost (Space) - Central -->
+            <div id="boost-btn" class="action-btn" onmousedown="activateBoost()" ontouchstart="activateBoost()">
+                <svg viewBox="0 0 24 24">
+                    <path d="M7 2v11h3v9l7-12h-4l4-8z"/>
+                </svg>
+            </div>
+
+            <!-- Magnify (C) - NEW -->
+            <div id="magnify-btn" class="action-btn ability-btn magnify" onmousedown="activateMagnify()" ontouchstart="activateMagnify()">
+                <svg viewBox="0 0 24 24">
+                    <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                    <circle cx="9.5" cy="9.5" r="2.5" />
+                </svg>
+            </div>
+
+            <!-- Shield (X) -->
+            <div id="shield-btn" class="action-btn ability-btn shield" onmousedown="activateShield()" ontouchstart="activateShield()">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+                </svg>
+            </div>
+
+        </div>
+        
+        <div id="toast">Not enough coins!</div>
+
+        <!-- NEW LOBBY SCREEN -->
+        <div id="startScreen">
+            <div class="lobby-header">
+                <div class="game-title">
+                    <h1 data-lang-key="gameTitle">Desi Snake</h1>
+                    <span data-lang-key="subTitle">ROYAL FEAST</span>
+                </div>
+                <div class="lobby-currency">
+                    <div class="curr-item">
+                        <span class="curr-label" data-lang-key="best">Best</span>
+                        <span class="curr-val score" id="lobbyHighScore">0</span>
+                    </div>
+                    <div style="width: 1px; background: #b8860b; height: 30px;"></div>
+                    <div class="curr-item">
+                        <span class="curr-label" data-lang-key="wealth">Wealth</span>
+                        <span class="curr-val" id="lobbyCoins">0 ₹</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lobby-content-wrapper">
+                
+                <!-- Left Column -->
+                <div class="lobby-left-col">
+                    <div class="player-profile">
+                        <input type="text" id="playerNameInput" placeholder="Player Name" maxlength="12" value="Player">
+                        <svg class="edit-icon" viewBox="0 0 24 24" fill="white">
+                            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                        </svg>
+                    </div>
+
+                    <div class="map-selector">
+                        <div class="map-card active" data-map="gateway" onclick="selectMap('gateway')">
+                            <!-- Fallback gradient is in CSS. Image overlays it. -->
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/3/3a/Mumbai_03-2016_30_Gateway_of_India.jpg" 
+                                 alt="Gateway" onerror="this.style.display='none'">
+                            <div class="map-label" data-lang-key="mapGateway">Gateway</div>
+                        </div>
+                        <div class="map-card" data-map="himalaya" onclick="selectMap('himalaya')">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/e/e7/Everest_North_Face_toward_Base_Camp_Tibet_Luca_Galuzzi_2006.jpg" 
+                                 alt="Himalaya" onerror="this.style.display='none'">
+                            <div class="map-label" data-lang-key="mapHimalaya">Himalayas</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column (Controls & Footer actions) -->
+                <div class="lobby-right-col">
+                    <div class="controls-group">
+                        <div class="control-toggle">
+                            <div class="toggle-opt ctrl-btn active" data-mode="touch" onclick="setControl('touch')" data-lang-key="touch">TOUCH</div>
+                            <div class="toggle-opt ctrl-btn" data-mode="joystick" onclick="setControl('joystick')" data-lang-key="joystick">JOYSTICK</div>
+                        </div>
+
+                        <!-- New Game Mode Toggle -->
+                        <div class="control-toggle">
+                            <div class="toggle-opt mode-btn active" data-gamemode="bots" onclick="setGameMode('bots')" data-lang-key="single">SINGLE</div>
+                            <div class="toggle-opt mode-btn" data-gamemode="online" onclick="setGameMode('online')" data-lang-key="online">ONLINE</div>
+                        </div>
+                    </div>
+
+                    <div id="control-desc" style="color: #ffcc99; font-size: 12px; text-align: center; margin: 5px 0; opacity: 0.8; pointer-events: none;" data-lang-key="controlDesc">Snake follows your finger or mouse.</div>
+
+                    <div class="footer-actions">
+                        <div class="menu-grid">
+                            <button class="menu-btn blue" onclick="openQuests()">
+                                <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                                <span data-lang-key="quests">Quests</span>
+                            </button>
+                            <button class="menu-btn gold" onclick="openSpinWheel()">
+                                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v4.61l3.3 1.9 1.4-1.4L13 9.4V7z"/></svg>
+                                <span data-lang-key="spin">Spin</span>
+                            </button>
+                            <button class="menu-btn purple" onclick="openSkins()">
+                                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                                <span data-lang-key="shop">Shop</span>
+                            </button>
+                            <button class="menu-btn" onclick="openSettings()">
+                                <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96c-.22-.08.47 0 .59-.22l-1.92 3.32c-.12.22-.07.47.12.61l2.03 1.58c-.05.3-.07.63-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.03-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+                                <span data-lang-key="settings">Settings</span>
+                            </button>
+                        </div>
+
+                        <button class="play-btn-large" onclick="startGame()" data-lang-key="play">FEAST</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- POPUPS -->
+        <div id="questScreen" class="hidden">
+            <h1 data-lang-key="dailyQuests">Daily Quests</h1>
+            <div id="questTimer" style="color:#ff9933; margin-bottom:10px; font-size:12px;"><span data-lang-key="refreshesIn">Refreshes in:</span> 00:00:00</div>
+            
+            <div id="questList">
+            </div>
+            
+            <button class="btn" onclick="closeQuests()">Back</button>
+        </div>
+        
+        <div id="spinWheelScreen" class="hidden">
+             <h1 data-lang-key="dailySpin">Daily Spin</h1>
+             <p style="font-size:12px; color:#aaa;">Probabilities: Legend(1%), Epic(9%), Normal(25%), Try Again(65%)</p>
+             <canvas id="spinWheelCanvas" width="300" height="300"></canvas>
+             <div id="spinTimer"><span data-lang-key="nextReset">Next Reset:</span> 00:00:00</div>
+             <button class="btn btn-gold" id="doSpinBtn" onclick="doSpin()" data-lang-key="spinBtn">SPIN!</button>
+             <button class="btn" onclick="closeSpinWheel()">Back</button>
+        </div>
+
+        <div id="skinScreen" class="hidden">
+            <div class="shop-header">
+                <h1 data-lang-key="snakeShop">Snake Shop</h1>
+                <div style="color:#ffd700; font-size:16px;"><span data-lang-key="shopCoins">Coins</span>: <span id="shopCoins">0</span> ₹</div>
+                <button onclick="closeSkins()" style="background:transparent; border:none; color:white; font-size:24px; cursor:pointer;">&times;</button>
+            </div>
+
+            <div class="shop-body">
+                <div class="skin-list">
+                    <div class="skin-category">
+                        <h3 data-lang-key="normal">Normal (15 ₹)</h3>
+                        <div class="skin-grid" id="grid-normal"></div>
+                    </div>
+                    <div class="skin-category">
+                        <h3 class="text-epic" data-lang-key="epic">Epic (100 ₹)</h3>
+                        <div class="skin-grid" id="grid-epic"></div>
+                    </div>
+                    <div class="skin-category">
+                        <h3 class="text-legendary" data-lang-key="legendary">Legendary (300 ₹)</h3>
+                        <div class="skin-grid" id="grid-legendary"></div>
+                    </div>
+                </div>
+
+                <div class="skin-preview-panel">
+                    <div id="previewSkinName">Default</div>
+                    <div id="previewSkinRarity">Normal Skin</div>
+                    
+                    <canvas id="shopPreviewCanvas" width="200" height="200"></canvas>
+                    
+                    <button id="skinActionBtn" class="btn" onclick="handleShopAction()">Selected</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="settingsScreen" class="hidden">
+            <h1 data-lang-key="settings">Settings</h1>
+
+            <!-- NEW LANGUAGE SETTINGS -->
+            <div class="section-header" data-lang-key="languageSettings">Language</div>
+            <div class="control-toggle" style="margin-bottom:20px;">
+                <div class="toggle-opt lang-btn active" data-lang="mr" onclick="setLanguage('mr')">मराठी</div>
+                <div class="toggle-opt lang-btn" data-lang="hi" onclick="setLanguage('hi')">हिंदी</div>
+                <div class="toggle-opt lang-btn" data-lang="en" onclick="setLanguage('en')">English</div>
+            </div>
+
+            <div class="section-header" data-lang-key="audioSettings">Audio Settings</div>
+            <div class="toggle-row">
+                <span style="font-weight:bold; color:#ffcc00;" data-lang-key="music">Music Master Switch</span>
+                <button class="toggle-opt active" id="musicToggleBtn" onclick="toggleMusic()" style="max-width:80px;">ON</button>
+            </div>
+            <div class="input-group">
+                <label data-lang-key="option1">Option 1: Upload MP3 File</label>
+                <input type="file" id="musicFileInput" class="url-input" accept="audio/*" onchange="handleFileUpload()">
+            </div>
+            <div class="input-group">
+                <label data-lang-key="option2">Option 2: Paste MP3 Link</label>
+                <input type="text" id="musicUrlInput" class="url-input" placeholder="Paste .mp3 link here..." onchange="handleUrlInput()">
+            </div>
+            <p style="font-size:10px; color:#aaa; margin-top:-10px; margin-bottom:15px;" data-lang-key="note">Leave both empty for default Procedural Sitar.</p>
+            <div class="section-header" data-lang-key="controlSettings">Control Settings</div>
+            <div class="control-toggle" style="margin-bottom:20px;">
+                <div class="toggle-opt ctrl-btn active" data-mode="touch" onclick="setControl('touch')" data-lang-key="touch">Touch</div>
+                <div class="toggle-opt ctrl-btn" data-mode="joystick" onclick="setControl('joystick')" data-lang-key="joystick">Joystick</div>
+            </div>
+            <!-- Dynamic Setting Buttons -->
+            <button class="btn" id="settingsResumeBtn" onclick="closeSettings()" data-lang-key="resume">Resume Game</button>
+            <button class="btn btn-red" id="settingsQuitBtn" onclick="quitGame()" data-lang-key="quit">Quit Game</button>
+            <button class="btn hidden" id="settingsReturnLobbyBtn" onclick="closeSettings()" data-lang-key="lobby">Return to Lobby</button>
+        </div>
+
+        <div id="gameOverScreen" class="hidden">
+            <h1 data-lang-key="gameOver">Game Over!</h1>
+            <h2 id="finalScoreDisplay">Score: 0</h2>
+            <p id="flavorText">You hit the wall!</p>
+            <button class="btn" onclick="startGame()" style="margin-bottom: 15px;" data-lang-key="playAgain">Play Again</button>
+            <div class="control-options" style="margin: 0; display:flex; gap:10px;">
+                <button class="btn btn-purple" onclick="openSkins()" style="flex: 1; margin: 0;" data-lang-key="skins">Skins</button>
+                <button class="btn btn-blue" onclick="quitGame()" style="flex: 1; margin: 0;" data-lang-key="lobby">Lobby</button>
+            </div>
+        </div>
+        
+        <canvas id="mini-map" class="game-ui hidden"></canvas>
+    </div>
+
+<script>
+    // --- LANGUAGE SYSTEM ---
+    let currentLang = localStorage.getItem('desiSnakeLang') || 'mr'; // Default Marathi
+    
+    const TRANSLATIONS = {
+        en: {
+            gameTitle: "Desi Snake",
+            subTitle: "ROYAL FEAST",
+            score: "Score",
+            best: "Best",
+            wealth: "Wealth",
+            play: "FEAST",
+            quests: "Quests",
+            spin: "Spin",
+            shop: "Shop",
+            settings: "Settings",
+            touch: "TOUCH",
+            joystick: "JOYSTICK",
+            single: "SINGLE",
+            online: "ONLINE",
+            controlDesc: "Snake follows your finger or mouse.",
+            music: "Music",
+            audioSettings: "Audio Settings",
+            controlSettings: "Control Settings",
+            languageSettings: "Language",
+            resume: "Resume Game",
+            quit: "Quit Game",
+            lobby: "Return to Lobby",
+            gameOver: "Game Over!",
+            playAgain: "Play Again",
+            skins: "Skins",
+            dailyQuests: "Daily Quests",
+            dailySpin: "Daily Spin",
+            snakeShop: "Snake Shop",
+            refreshesIn: "Refreshes in:",
+            nextReset: "Next Reset:",
+            spinBtn: "SPIN!",
+            comeBack: "Come back tomorrow",
+            betterLuck: "Better Luck",
+            tryAgain: "Try Again",
+            claimed: "Claimed",
+            claim: "Claim",
+            select: "Select",
+            selected: "Selected",
+            buy: "Buy",
+            owned: "Owned",
+            normal: "Normal",
+            epic: "Epic",
+            legendary: "Legendary",
+            mapGateway: "Gateway",
+            mapHimalaya: "Himalayas",
+            shopCoins: "Coins",
+            playerName: "Player Name",
+            option1: "Option 1: Upload MP3 File",
+            option2: "Option 2: Paste MP3 Link",
+            note: "Leave both empty for default Procedural Sitar."
+        },
+        hi: {
+            gameTitle: "देसी साँप",
+            subTitle: "शाही दावत",
+            score: "स्कोर",
+            best: "श्रेष्ठ",
+            wealth: "धन",
+            play: "खेलें",
+            quests: "कार्य",
+            spin: "चक्र",
+            shop: "दुकान",
+            settings: "सेटिंग्स",
+            touch: "स्पर्श",
+            joystick: "जॉयस्टिक",
+            single: "अकेले",
+            online: "ऑनलाइन",
+            controlDesc: "साँप आपकी उंगली या माउस का पीछा करता है।",
+            music: "संगीत",
+            audioSettings: "ऑडियो सेटिंग्स",
+            controlSettings: "नियंत्रण सेटिंग्स",
+            languageSettings: "भाषा",
+            resume: "खेल जारी रखें",
+            quit: "खेल छोड़ें",
+            lobby: "लॉबी में लौटें",
+            gameOver: "खेल खत्म!",
+            playAgain: "फिर से खेलें",
+            skins: "पोशाक",
+            dailyQuests: "दैनिक कार्य",
+            dailySpin: "दैनिक चक्र",
+            snakeShop: "नाग दुकान",
+            refreshesIn: "ताज़ा होगा:",
+            nextReset: "अगला रीसेट:",
+            spinBtn: "घुमाओ!",
+            comeBack: "कल वापस आना",
+            betterLuck: "अगली बार",
+            tryAgain: "पुनः प्रयास",
+            claimed: "प्राप्त",
+            claim: "लें",
+            select: "चुनें",
+            selected: "चयनित",
+            buy: "खरीदें",
+            owned: "स्वामित्व",
+            normal: "साधारण (15 ₹)",
+            epic: "महाकाव्य (100 ₹)",
+            legendary: "पौराणिक (300 ₹)",
+            mapGateway: "गेटवे",
+            mapHimalaya: "हिमालय",
+            shopCoins: "सिक्के",
+            playerName: "खिलाड़ी का नाम",
+            option1: "विकल्प 1: MP3 फ़ाइल अपलोड करें",
+            option2: "विकल्प 2: MP3 लिंक पेस्ट करें",
+            note: "डिफ़ॉल्ट सितार के लिए दोनों खाली छोड़ दें।"
+        },
+        mr: {
+            gameTitle: "देशी साप",
+            subTitle: "राजेशाही मेजवानी",
+            score: "गुण",
+            best: "सर्वोत्तम",
+            wealth: "संपत्ती",
+            play: "खेळा",
+            quests: "आव्हाने",
+            spin: "चक्र",
+            shop: "दुकान",
+            settings: "सेटिंग्ज",
+            touch: "स्पर्श",
+            joystick: "जॉयस्टिक",
+            single: "एकटे",
+            online: "ऑनलाइन",
+            controlDesc: "साप आपल्या बोटाच्या किंवा माउसच्या मागे येतो.",
+            music: "संगीत",
+            audioSettings: "ऑडिओ सेटिंग्ज",
+            controlSettings: "नियंत्रण सेटिंग्ज",
+            languageSettings: "भाषा",
+            resume: "खेल सुरू ठेवा",
+            quit: "खेल सोडा",
+            lobby: "लॉबीमध्ये परत",
+            gameOver: "खेल समाप्त!",
+            playAgain: "पुन्हा खेळा",
+            skins: "पोशाख",
+            dailyQuests: "दैनिक आव्हाने",
+            dailySpin: "दैनिक चक्र",
+            snakeShop: "नाग भांडार",
+            refreshesIn: "पुन्हा सुरु:",
+            nextReset: "पुढील चक्र:",
+            spinBtn: "फिरवा!",
+            comeBack: "उद्या या",
+            betterLuck: "पुढच्या वेळी",
+            tryAgain: "पुन्हा",
+            claimed: "मिळाले",
+            claim: "मिळवा",
+            select: "निवडा",
+            selected: "निवडलेले",
+            buy: "खरेदी",
+            owned: "मालकीचे",
+            normal: "सामान्य (15 ₹)",
+            epic: "विशेष (100 ₹)",
+            legendary: "पौराणिक (300 ₹)",
+            mapGateway: "गेटवे",
+            mapHimalaya: "हिमालय",
+            shopCoins: "नाणी",
+            playerName: "खेळाडूचे नाव",
+            option1: "पर्याय 1: MP3 फाइल अपलोड करा",
+            option2: "पर्याय 2: MP3 लिंक पेस्ट करा",
+            note: "डिफ़ॉल्ट सतारसाठी दोन्ही रिकामे सोडा."
+        }
+    };
+
+    function setLanguage(lang) {
+        currentLang = lang;
+        localStorage.setItem('desiSnakeLang', lang);
+        
+        // Update Buttons Visual State
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            if(btn.dataset.lang === lang) btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
+        
+        updateLanguageUI();
+    }
+
+    function updateLanguageUI() {
+        const t = TRANSLATIONS[currentLang];
+        
+        // Update elements with data-lang-key attribute
+        document.querySelectorAll('[data-lang-key]').forEach(el => {
+            const key = el.dataset.langKey;
+            if(t[key]) {
+                el.innerText = t[key];
+            }
+        });
+        
+        // Update Placeholder
+        if(t.playerName) document.getElementById('playerNameInput').placeholder = t.playerName;
+        
+        // Update Dynamic Button Text if visible
+        if(skinScreen && !skinScreen.classList.contains('hidden')) updateActionBtn();
+    }
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const miniMapCanvas = document.getElementById('mini-map');
+    const miniCtx = miniMapCanvas.getContext('2d');
+    const playerNameInput = document.getElementById('playerNameInput');
+    
+    // --- Image Loaders ---
+    // Using more reliable Image Sources
+    const gatewayImage = new Image();
+    const gatewayUrl = 'https://upload.wikimedia.org/wikipedia/commons/3/3a/Mumbai_03-2016_30_Gateway_of_India.jpg'; 
+    gatewayImage.src = gatewayUrl;
+    gatewayImage.onerror = function() { console.log('Gateway Image Failed - Using Fallback'); };
+
+    const himalayaImage = new Image();
+    const himalayaUrl = 'https://upload.wikimedia.org/wikipedia/commons/e/e7/Everest_North_Face_toward_Base_Camp_Tibet_Luca_Galuzzi_2006.jpg'; 
+    himalayaImage.src = himalayaUrl;
+    himalayaImage.onerror = function() { console.log('Himalaya Image Failed - Using Fallback'); };
+    
+    // DOM Elements
+    const joystickContainer = document.getElementById('joystick-container');
+    const joystickKnob = document.getElementById('joystick-knob');
+    const actionsContainer = document.getElementById('actions-container');
+    const boostBtn = document.getElementById('boost-btn'); 
+    const magnetBtn = document.getElementById('magnet-btn');
+    const shieldBtn = document.getElementById('shield-btn');
+    const magnifyBtn = document.getElementById('magnify-btn');
+    const controlDesc = document.getElementById('control-desc');
+    const startScreen = document.getElementById('startScreen');
+    const settingsScreen = document.getElementById('settingsScreen');
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    const skinScreen = document.getElementById('skinScreen');
+    const spinWheelScreen = document.getElementById('spinWheelScreen');
+    const questScreen = document.getElementById('questScreen');
+    const scoreEl = document.getElementById('scoreVal');
+    const coinEl = document.getElementById('coinVal');
+    const shopCoinEl = document.getElementById('shopCoins');
+    const lobbyCoinsEl = document.getElementById('lobbyCoins');
+    const highScoreEl = document.getElementById('highScoreVal');
+    const lobbyHighScoreEl = document.getElementById('lobbyHighScore');
+    const fpsEl = document.getElementById('fpsVal');
+    const lbContent = document.getElementById('lb-content');
+    const finalScoreDisplay = document.getElementById('finalScoreDisplay');
+    const flavorText = document.getElementById('flavorText');
+    const settingsBtnGame = document.getElementById('settings-btn-game');
+    const musicToggleBtn = document.getElementById('musicToggleBtn');
+    const musicUrlInput = document.getElementById('musicUrlInput');
+    const musicFileInput = document.getElementById('musicFileInput');
+    const bgMusic = document.getElementById('bgMusic');
+    const toast = document.getElementById('toast');
+    
+    // Shop Elements
+    const shopPreviewCanvas = document.getElementById('shopPreviewCanvas');
+    const shopCtx = shopPreviewCanvas.getContext('2d');
+    const previewNameEl = document.getElementById('previewSkinName');
+    const previewRarityEl = document.getElementById('previewSkinRarity');
+    const skinActionBtn = document.getElementById('skinActionBtn');
+
+    // Spin Wheel Elements
+    const spinCanvas = document.getElementById('spinWheelCanvas');
+    const spinCtx = spinCanvas.getContext('2d');
+    const spinTimer = document.getElementById('spinTimer');
+    const doSpinBtn = document.getElementById('doSpinBtn');
+
+    // Quest Elements
+    const questList = document.getElementById('questList');
+    const questTimer = document.getElementById('questTimer');
+
+    // Game Config
+    const WORLD_SIZE = 3000;
+    const BASE_SPEED = 3; 
+    const BOOST_SPEED = 6; 
+    let currentSpeed = BASE_SPEED;
+    const TURN_SPEED = 0.08;
+    const INITIAL_LENGTH = 10; 
+    const SEGMENT_DISTANCE = 4;
+    const SNAKE_WIDTH = 25;
+
+    // State
+    let score = 0;
+    let playerName = "Player";
+    let coins = parseInt(localStorage.getItem('desiSnakeCoins')) || 0;
+    let unlockedSkins = JSON.parse(localStorage.getItem('desiSnakeSkins')) || ['default'];
+    let highScore = localStorage.getItem('desiSnakeIoHighScore') || 0;
+    let isRunning = false; 
+    let isPaused = false;
+    let animationId;
+    let shopAnimationId;
+    let controlMode = 'touch'; 
+    let gameMode = 'bots'; 
+    let currentMap = 'gateway'; 
+    let currentSkin = localStorage.getItem('desiSnakeCurrentSkin') || 'default';
+    let musicEnabled = true;
+    let useCustomMusic = false;
+    
+    // --- ABILITY STATE ---
+    
+    // Magnet: 10s Active, 90s (1:30) Cooldown
+    let magnetActive = false;
+    let magnetEndTime = 0;
+    let magnetCooldownEnd = 0;
+    const MAGNET_DURATION = 10000;
+    const MAGNET_COOLDOWN = 90000; 
+
+    // Boost: 10s Active, 150s (2:30) Cooldown
+    let boostActive = false;
+    let boostEndTime = 0;
+    let boostCooldownEnd = 0;
+    const BOOST_DURATION = 10000;
+    const BOOST_COOLDOWN = 150000;
+
+    // Shield: 10s Active, 120s (2:00) Cooldown
+    let shieldActive = false;
+    let shieldEndTime = 0;
+    let shieldCooldownEnd = 0;
+    const SHIELD_DURATION = 10000;
+    const SHIELD_COOLDOWN = 120000;
+
+    // Magnify (Zoom Out): 10s Active, 60s (1:00) Cooldown
+    let magnifyActive = false;
+    let magnifyEndTime = 0;
+    let magnifyCooldownEnd = 0;
+    const MAGNIFY_DURATION = 10000;
+    const MAGNIFY_COOLDOWN = 60000;
+    let currentZoom = 1.0;
+
+    // Initial UI Update
+    coinEl.innerText = coins;
+    lobbyCoinsEl.innerText = coins + ' ₹';
+    highScoreEl.innerText = highScore;
+    lobbyHighScoreEl.innerText = highScore;
+
+    // Session Stats for Quests
+    let sessionStats = {
+        score: 0,
+        kills: 0,
+        foodEaten: 0,
+        length: 0
+    };
+
+    // --- FPS & Leaderboard State ---
+    let lastTime = performance.now();
+    let frameCount = 0;
+    let fpsTimer = 0;
+
+    // --- ENEMY AI CONFIG ---
+    let enemies = [];
+    const BOT_PREFIXES = ["Desi", "Crazy", "Super", "Royal", "Toxic", "Dark", "Hyper", "Pro", "Noob", "King"];
+    const BOT_SUFFIXES = ["Snake", "Cobra", "Viper", "Python", "Hunter", "Killer", "Boss", "Don", "Bhai", "Raja"];
+
+    function getBotName() {
+        return BOT_PREFIXES[Math.floor(Math.random() * BOT_PREFIXES.length)] + "_" +
+               BOT_SUFFIXES[Math.floor(Math.random() * BOT_SUFFIXES.length)] +
+               "_" + Math.floor(Math.random() * 99);
+    }
+    
+    // Shop State
+    let selectedShopSkin = null; // The skin currently viewed in preview
+    
+    // SKIN DATABASE
+    const SKINS = [
+        { id: 'default', name: 'Default', cost: 0, rarity: 'Normal', cat: 'normal', class: 'preview-default' },
+        { id: 'red', name: 'Ruby Red', cost: 15, rarity: 'Normal', cat: 'normal', class: 'preview-red' },
+        { id: 'black', name: 'Midnight Black', cost: 15, rarity: 'Normal', cat: 'normal', class: 'preview-black' },
+        { id: 'orange', name: 'Sunset Orange', cost: 15, rarity: 'Normal', cat: 'normal', class: 'preview-orange' },
+        { id: 'purple', name: 'Royal Purple', cost: 15, rarity: 'Normal', cat: 'normal', class: 'preview-purple' },
+        { id: 'yellow', name: 'Sunshine Yellow', cost: 15, rarity: 'Normal', cat: 'normal', class: 'preview-yellow' },
+        { id: 'green', name: 'Forest Green', cost: 15, rarity: 'Normal', cat: 'normal', class: 'preview-green' },
+        { id: 'pink', name: 'Hot Pink', cost: 15, rarity: 'Normal', cat: 'normal', class: 'preview-pink' },
+        { id: 'gold', name: 'Golden Cobra', cost: 100, rarity: 'Epic', cat: 'epic', class: 'preview-gold' },
+        { id: 'rangoli', name: 'Rangoli Master', cost: 100, rarity: 'Epic', cat: 'epic', class: 'preview-rangoli' },
+        { id: 'tiger', name: 'Bengal Tiger', cost: 100, rarity: 'Epic', cat: 'epic', class: 'preview-tiger' },
+        { id: 'peacock', name: 'Royal Peacock', cost: 100, rarity: 'Epic', cat: 'epic', class: 'preview-peacock' },
+        { id: 'kaleidoscope', name: 'Kaleidoscope', cost: 100, rarity: 'Epic', cat: 'epic', class: 'preview-kaleidoscope' },
+        { id: 'legend1', name: 'Neon Cyber', cost: 300, rarity: 'Legendary', cat: 'legendary', class: 'preview-legend1' },
+        { id: 'legend2', name: 'Plasma Storm', cost: 300, rarity: 'Legendary', cat: 'legendary', class: 'preview-legend2' },
+        { id: 'legend3', name: 'Cosmic Void', cost: 300, rarity: 'Legendary', cat: 'legendary', class: 'preview-legend3' },
+        { id: 'legend4', name: 'Divine Radiance', cost: 300, rarity: 'Legendary', cat: 'legendary', class: 'preview-legend4' }
+    ];
+
+    // Joystick
+    let joystickActive = false;
+    let joystickAngle = 0;
+    let joystickCenter = { x: 0, y: 0 };
+    const MAX_JOYSTICK_RADIUS = 40;
+    
+    // Weather System
+    const weatherParticles = [];
+    const PARTICLE_COUNT = 200;
+
+    // Entities
+    let snake = { x: 0, y: 0, angle: 0, history: [], length: INITIAL_LENGTH };
+    let previewSnake = { x: 100, y: 100, angle: 0, history: [], length: 10 }; // For shop
+    let foods = [];
+    const FOOD_COUNT = 100;
+
+    let mouseX = window.innerWidth / 2;
+    let mouseY = window.innerHeight / 2;
+
+    // Food Types
+    // --- UPDATED FOOD DATA ---
+    const gatewayFoodTypes = [
+        { name: 'Modak', color: '#fff', score: 20, radius: 14 },
+        { name: 'Vada Pav', color: '#D2691E', score: 15, radius: 16 },
+        { name: 'Laddu', color: '#FFD700', score: 10, radius: 15 }, // Was Puran Poli
+        { name: 'Misal Pav', color: '#ff4500', score: 25, radius: 17 } // Replaced Chai
+    ];
+
+    const himalayaFoodTypes = [
+        { name: 'Fried Momo', color: '#e05a00', score: 20, radius: 14 },
+        { name: 'Sel Roti', color: '#8b4513', score: 15, radius: 16 }, // Replaced Tsampa
+        { name: 'Thukpa', color: '#f0e68c', score: 10, radius: 17 },   // Replaced Gundruk
+        { name: 'Aloo Dum', color: '#b22222', score: 25, radius: 15 }   // Replaced Siddu
+    ];
+
+    // --- QUEST SYSTEM LOGIC ---
+    let dailyQuests = [];
+    
+    const QUEST_TEMPLATES = [
+        { type: 'score', target: 500, desc: "Score 500 in one game", reward: 1 },
+        { type: 'score', target: 1000, desc: "Score 1000 in one game", reward: 2 },
+        { type: 'score', target: 2500, desc: "Score 2500 in one game", reward: 4 },
+        { type: 'score', target: 5000, desc: "Score 5000 in one game", reward: 5 },
+        { type: 'food', target: 20, desc: "Eat 20 food items", reward: 1 },
+        { type: 'food', target: 50, desc: "Eat 50 food items", reward: 3 },
+        { type: 'food', target: 100, desc: "Eat 100 food items", reward: 5 },
+        { type: 'kills', target: 1, desc: "Kill 1 Snake", reward: 2 },
+        { type: 'kills', target: 3, desc: "Kill 3 Snakes in one game", reward: 4 },
+        { type: 'kills', target: 5, desc: "Kill 5 Snakes in one game", reward: 5 },
+        { type: 'length', target: 30, desc: "Reach Length 30", reward: 2 },
+        { type: 'length', target: 60, desc: "Reach Length 60", reward: 4 }
+    ];
+
+    function generateQuests() {
+        const todayStr = new Date().toDateString();
+        const savedDate = localStorage.getItem('desiSnakeQuestDate');
+        
+        if (savedDate !== todayStr) {
+            dailyQuests = [];
+            for(let i=0; i<5; i++) {
+                let tpl = QUEST_TEMPLATES[Math.floor(Math.random() * QUEST_TEMPLATES.length)];
+                dailyQuests.push({
+                    id: i,
+                    type: tpl.type,
+                    target: tpl.target,
+                    desc: tpl.desc,
+                    reward: tpl.reward,
+                    completed: false,
+                    claimed: false
+                });
+            }
+            localStorage.setItem('desiSnakeQuests', JSON.stringify(dailyQuests));
+            localStorage.setItem('desiSnakeQuestDate', todayStr);
+        } else {
+            dailyQuests = JSON.parse(localStorage.getItem('desiSnakeQuests'));
+        }
+    }
+    
+    // Initial Load
+    generateQuests();
+
+    function openQuests() {
+        startScreen.classList.add('hidden');
+        questScreen.classList.remove('hidden');
+        renderQuestList();
+        updateQuestTimer();
+    }
+    
+    function closeQuests() {
+        questScreen.classList.add('hidden');
+        startScreen.classList.remove('hidden');
+    }
+    
+    function renderQuestList() {
+        questList.innerHTML = '';
+        const t = TRANSLATIONS[currentLang];
+        
+        dailyQuests.forEach((q, index) => {
+            const item = document.createElement('div');
+            item.className = `quest-item ${q.completed ? 'completed' : ''}`;
+            
+            let btnHtml = '';
+            if(q.claimed) {
+                btnHtml = `<button class="quest-btn btn-done">${t.claimed}</button>`;
+            } else if(q.completed) {
+                btnHtml = `<button class="quest-btn btn-claim" onclick="claimQuest(${index})">${t.claim}</button>`;
+            } else {
+                btnHtml = `<button class="quest-btn btn-prog">${q.reward} <span style="font-size:10px">Coins</span></button>`;
+            }
+            
+            item.innerHTML = `
+                <div class="quest-info">
+                    <div class="quest-desc">${q.desc}</div>
+                    <div class="quest-reward">Reward: ${q.reward} Coins</div>
+                </div>
+                ${btnHtml}
+            `;
+            questList.appendChild(item);
+        });
+    }
+    
+    window.claimQuest = function(index) {
+        if(dailyQuests[index].completed && !dailyQuests[index].claimed) {
+            dailyQuests[index].claimed = true;
+            coins += dailyQuests[index].reward;
+            localStorage.setItem('desiSnakeCoins', coins);
+            coinEl.innerText = coins;
+            shopCoinEl.innerText = coins; 
+            lobbyCoinsEl.innerText = coins + ' ₹';
+            
+            localStorage.setItem('desiSnakeQuests', JSON.stringify(dailyQuests));
+            
+            showToast(`Claimed ${dailyQuests[index].reward} Coins!`);
+            playSpinTick(); 
+            renderQuestList(); 
+        }
+    }
+    
+    function updateQuestTimer() {
+        if(questScreen.classList.contains('hidden')) return;
+        
+        const now = new Date();
+        const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        const diff = tomorrow - now;
+        
+        const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((diff % (1000 * 60)) / 1000);
+        
+        const t = TRANSLATIONS[currentLang];
+        questTimer.innerText = `${t.refreshesIn} ${h}h ${m}m ${s}s`;
+        
+        requestAnimationFrame(updateQuestTimer);
+    }
+    
+    // --- SNAKE TO FOOD CONVERSION ---
+    function convertSnakeToFood(targetSnake) {
+        const step = SEGMENT_DISTANCE * 2; 
+        for (let i = 0; i < targetSnake.history.length; i += step) {
+            const seg = targetSnake.history[i];
+            let types = (currentMap === 'gateway') ? gatewayFoodTypes : himalayaFoodTypes;
+            const type = types[Math.floor(Math.random() * types.length)];
+            
+            foods.push({
+                x: seg.x + (Math.random() - 0.5) * 10, 
+                y: seg.y + (Math.random() - 0.5) * 10,
+                ...type,
+                score: Math.floor(type.score / 2)
+            });
+        }
+    }
+
+    // --- AUDIO SYSTEM ---
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx;
+    let nextNoteTime = 0;
+    let noteIndex = 0;
+    const notes = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 392.00, 329.63, 293.66, 261.63];
+
+    function initAudio() {
+        if (!audioCtx) audioCtx = new AudioContext();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function playTone(freq, type, duration) {
+        if(!audioCtx) initAudio();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    }
+    
+    function scheduleProceduralMusic() {
+        if(!isRunning || isPaused || !musicEnabled || useCustomMusic) return;
+        
+        // --- ANTI-FREEZE FIX: Reset time if it falls behind ---
+        if (nextNoteTime < audioCtx.currentTime) {
+            nextNoteTime = audioCtx.currentTime;
+        }
+
+        function playSitarNote(freq, time, duration) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            const filter = audioCtx.createBiquadFilter();
+            osc.type = 'sawtooth';
+            osc.frequency.value = freq;
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(800, time);
+            filter.frequency.exponentialRampToValueAtTime(100, time + duration);
+            gain.gain.setValueAtTime(0, time);
+            gain.gain.linearRampToValueAtTime(0.1, time + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+            osc.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(time);
+            osc.stop(time + duration);
+        }
+        
+        function playTabla(time) {
+             const osc = audioCtx.createOscillator();
+             const gain = audioCtx.createGain();
+             osc.frequency.setValueAtTime(150, time);
+             osc.frequency.exponentialRampToValueAtTime(80, time + 0.1);
+             gain.gain.setValueAtTime(0.3, time);
+             gain.gain.exponentialRampToValueAtTime(0.01, time + 0.2);
+             osc.connect(gain);
+             gain.connect(audioCtx.destination);
+             osc.start(time);
+             osc.stop(time + 0.2);
+        }
+
+        // Limit scheduling loop to prevent blocking thread if time jumps
+        let safeLoopCount = 0;
+        while (nextNoteTime < audioCtx.currentTime + 0.1 && safeLoopCount < 50) {
+            const freq = notes[noteIndex % notes.length];
+            if(Math.random() > 0.2) playSitarNote(freq, nextNoteTime, 0.3);
+            if(noteIndex % 2 === 0) playTabla(nextNoteTime);
+            nextNoteTime += 0.20; 
+            noteIndex++;
+            if(Math.random() > 0.8) noteIndex += Math.floor(Math.random() * 3);
+            safeLoopCount++;
+        }
+        if(isRunning && !isPaused) requestAnimationFrame(scheduleProceduralMusic);
+    }
+    
+    function playGameOverSound() {
+        if(!musicEnabled) return;
+        initAudio();
+        const now = audioCtx.currentTime;
+        [261.63, 311.13, 392.00].forEach(f => { 
+             const osc = audioCtx.createOscillator();
+             const gain = audioCtx.createGain();
+             osc.type = 'sawtooth';
+             osc.frequency.setValueAtTime(f, now);
+             osc.frequency.exponentialRampToValueAtTime(f/2, now + 1.5);
+             gain.gain.setValueAtTime(0.1, now);
+             gain.gain.exponentialRampToValueAtTime(0.001, now + 1.5);
+             osc.connect(gain);
+             gain.connect(audioCtx.destination);
+             osc.start(now);
+             osc.stop(now + 1.5);
+        });
+    }
+
+    // --- SPIN WHEEL AUDIO ---
+    function playSpinTick() { if(musicEnabled) playTone(800, 'square', 0.05); }
+    function playLegendarySound() { 
+        if(!musicEnabled) return; 
+        [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => { setTimeout(() => playTone(f, 'sawtooth', 0.5), i * 100); });
+    }
+    function playEpicSound() { if(!musicEnabled) return; [392.00, 493.88, 587.33].forEach((f, i) => { setTimeout(() => playTone(f, 'square', 0.4), i * 100); }); }
+    function playNormalSound() { if(musicEnabled) playTone(523.25, 'sine', 0.3); }
+    function playFailSound() { if(!musicEnabled) return; [440, 415, 392].forEach((f, i) => { setTimeout(() => playTone(f, 'triangle', 0.4), i * 300); }); }
+
+    // --- MUSIC MANAGER ---
+    function handleFileUpload() {
+        const file = musicFileInput.files[0];
+        if (file) {
+            const fileUrl = URL.createObjectURL(file);
+            musicUrlInput.value = ''; 
+            applyCustomMusic(fileUrl);
+        }
+    }
+
+    function handleUrlInput() {
+        const url = musicUrlInput.value.trim();
+        if (url) {
+            musicFileInput.value = ''; 
+            applyCustomMusic(url);
+        } else {
+             revertToDefaultMusic();
+        }
+    }
+
+    function applyCustomMusic(src) {
+        useCustomMusic = true;
+        bgMusic.src = src;
+        bgMusic.load();
+        if(isRunning && !isPaused && musicEnabled) {
+            bgMusic.play().catch(e => console.log("Audio play failed", e));
+        }
+    }
+    
+    function revertToDefaultMusic() {
+        useCustomMusic = false;
+        bgMusic.pause();
+        if(isRunning && !isPaused && musicEnabled) {
+            initAudio();
+            nextNoteTime = audioCtx.currentTime + 0.1;
+            scheduleProceduralMusic();
+        }
+    }
+
+    function startMusic() {
+        if(!musicEnabled) return;
+        if(useCustomMusic) {
+            bgMusic.play().catch(e => console.log("Audio play failed"));
+        } else {
+            initAudio();
+            nextNoteTime = audioCtx.currentTime + 0.1;
+            scheduleProceduralMusic();
+        }
+    }
+
+    function toggleMusic() {
+        musicEnabled = !musicEnabled;
+        if(musicEnabled) {
+            musicToggleBtn.innerText = "ON";
+            musicToggleBtn.classList.add('active');
+            musicToggleBtn.style.borderColor = '#0f0';
+            if(isRunning && !isPaused) startMusic();
+        } else {
+            musicToggleBtn.innerText = "OFF";
+            musicToggleBtn.classList.remove('active');
+            musicToggleBtn.style.borderColor = '#555';
+            bgMusic.pause();
+        }
+    }
+
+    // --- CONTROLS & SETTINGS ---
+    window.selectMap = function(map) {
+        currentMap = map;
+        document.querySelectorAll('.map-card').forEach(btn => {
+            if(btn.dataset.map === map) btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
+        initWeather();
+        foods = [];
+        for(let i=0; i<FOOD_COUNT; i++) spawnFood();
+    }
+
+    window.setControl = function(mode) {
+        controlMode = mode;
+        const t = TRANSLATIONS[currentLang];
+        document.querySelectorAll('.ctrl-btn').forEach(btn => {
+            if(btn.dataset.mode === mode) btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
+        
+        if(mode === 'touch') {
+            controlDesc.innerText = t.controlDesc;
+            joystickContainer.style.display = 'none';
+        } else if(mode === 'joystick') {
+            controlDesc.innerText = t.joystick === 'जॉयस्टिक' ? "खालील जॉयस्टिक वापरा." : (t.joystick === "जॉयस्टिक" ? "निचले जॉयस्टिक का प्रयोग करें." : "Use the virtual stick at bottom-left.");
+            if(isRunning && !isPaused) {
+                joystickContainer.style.display = 'block';
+            }
+        }
+    }
+
+    window.setGameMode = function(mode) {
+        gameMode = mode;
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            if(btn.dataset.gamemode === mode) btn.classList.add('active');
+            else btn.classList.remove('active');
+        });
+    }
+
+    // --- SHOP LOGIC ---
+    function initShopUI() {
+        document.getElementById('grid-normal').innerHTML = '';
+        document.getElementById('grid-epic').innerHTML = '';
+        document.getElementById('grid-legendary').innerHTML = '';
+
+        const t = TRANSLATIONS[currentLang];
+
+        SKINS.forEach(skin => {
+            const card = document.createElement('div');
+            card.className = `skin-card ${unlockedSkins.includes(skin.id) ? 'owned' : ''}`;
+            card.id = `skin-card-${skin.id}`;
+            card.onclick = () => selectPreviewSkin(skin.id);
+            
+            const previewDiv = document.createElement('div');
+            previewDiv.className = `skin-preview-icon ${skin.class}`;
+            
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'skin-name';
+            nameSpan.innerText = skin.name;
+            
+            const priceSpan = document.createElement('span');
+            priceSpan.className = 'skin-price';
+            priceSpan.innerText = unlockedSkins.includes(skin.id) ? t.owned : skin.cost + ' ₹';
+            
+            const ownedInd = document.createElement('div');
+            ownedInd.className = 'owned-indicator';
+
+            card.appendChild(previewDiv);
+            card.appendChild(nameSpan);
+            card.appendChild(priceSpan);
+            card.appendChild(ownedInd);
+            
+            if(skin.cat === 'normal') document.getElementById('grid-normal').appendChild(card);
+            else if(skin.cat === 'epic') document.getElementById('grid-epic').appendChild(card);
+            else document.getElementById('grid-legendary').appendChild(card);
+        });
+    }
+
+    window.openSkins = function() {
+        startScreen.classList.add('hidden');
+        gameOverScreen.classList.add('hidden');
+        skinScreen.classList.remove('hidden');
+        settingsBtnGame.classList.add('hidden');
+        shopCoinEl.innerText = coins;
+        
+        initShopUI();
+        selectPreviewSkin(currentSkin);
+        startShopLoop();
+    }
+
+    window.closeSkins = function() {
+        skinScreen.classList.add('hidden');
+        if(isRunning) settingsBtnGame.classList.remove('hidden');
+        if(!isRunning) startScreen.classList.remove('hidden');
+        cancelAnimationFrame(shopAnimationId);
+    }
+    
+    function selectPreviewSkin(skinId) {
+        selectedShopSkin = SKINS.find(s => s.id === skinId);
+        
+        previewNameEl.innerText = selectedShopSkin.name;
+        previewRarityEl.innerText = selectedShopSkin.rarity + " Skin";
+        if(selectedShopSkin.rarity === 'Epic') previewRarityEl.className = 'text-epic';
+        else if(selectedShopSkin.rarity === 'Legendary') previewRarityEl.className = 'text-legendary';
+        else previewRarityEl.className = '';
+
+        document.querySelectorAll('.skin-card').forEach(c => c.classList.remove('selected-in-shop'));
+        document.getElementById(`skin-card-${skinId}`).classList.add('selected-in-shop');
+
+        updateActionBtn();
+    }
+
+    function updateActionBtn() {
+        const isOwned = unlockedSkins.includes(selectedShopSkin.id);
+        const isEquipped = currentSkin === selectedShopSkin.id;
+        const t = TRANSLATIONS[currentLang];
+        
+        skinActionBtn.className = 'btn'; 
+        
+        if (isOwned) {
+            if (isEquipped) {
+                skinActionBtn.innerText = t.selected;
+                skinActionBtn.classList.add('btn-disabled');
+                skinActionBtn.disabled = true;
+            } else {
+                skinActionBtn.innerText = t.select;
+                skinActionBtn.classList.add('btn-purple');
+                skinActionBtn.disabled = false;
+            }
+        } else {
+            skinActionBtn.innerText = `${t.buy} ${selectedShopSkin.cost} ₹`;
+            if (coins >= selectedShopSkin.cost) {
+                skinActionBtn.classList.add('btn-green');
+                skinActionBtn.disabled = false;
+            } else {
+                skinActionBtn.classList.add('btn-disabled');
+                skinActionBtn.disabled = true;
+            }
+        }
+    }
+
+    window.handleShopAction = function() {
+        if (!selectedShopSkin) return;
+        const isOwned = unlockedSkins.includes(selectedShopSkin.id);
+
+        if (isOwned) {
+            currentSkin = selectedShopSkin.id;
+            localStorage.setItem('desiSnakeCurrentSkin', currentSkin);
+            updateActionBtn();
+        } else {
+            if (coins >= selectedShopSkin.cost) {
+                coins -= selectedShopSkin.cost;
+                localStorage.setItem('desiSnakeCoins', coins);
+                shopCoinEl.innerText = coins;
+                coinEl.innerText = coins;
+                lobbyCoinsEl.innerText = coins + ' ₹';
+
+                unlockedSkins.push(selectedShopSkin.id);
+                localStorage.setItem('desiSnakeSkins', JSON.stringify(unlockedSkins));
+                
+                currentSkin = selectedShopSkin.id;
+                localStorage.setItem('desiSnakeCurrentSkin', currentSkin);
+                
+                initShopUI();
+                selectPreviewSkin(selectedShopSkin.id);
+            }
+        }
+    }
+
+    // --- SPIN WHEEL LOGIC ---
+    let dailyWheelItems = [];
+    let spinAngle = 0;
+    let isSpinning = false;
+    let nextSpinTime = localStorage.getItem('desiSnakeNextSpinTime') || 0;
+
+    function generateDailyWheel() {
+        const todayStr = new Date().toDateString();
+        const savedDate = localStorage.getItem('desiSnakeWheelDate');
+        
+        if (savedDate !== todayStr) {
+            dailyWheelItems = [];
+            const legSkins = SKINS.filter(s => s.cat === 'legendary');
+            const epicSkins = SKINS.filter(s => s.cat === 'epic');
+            const normalSkins = SKINS.filter(s => s.cat === 'normal');
+            
+            dailyWheelItems[0] = {type: 'legendary', val: legSkins[Math.floor(Math.random()*legSkins.length)]};
+            dailyWheelItems[1] = {type: 'normal', val: normalSkins[Math.floor(Math.random()*normalSkins.length)]};
+            dailyWheelItems[2] = {type: 'fail', val: 'Better Luck'};
+            dailyWheelItems[3] = {type: 'epic', val: epicSkins[Math.floor(Math.random()*epicSkins.length)]};
+            dailyWheelItems[4] = {type: 'normal', val: normalSkins[Math.floor(Math.random()*normalSkins.length)]};
+            dailyWheelItems[5] = {type: 'fail', val: 'Better Luck'};
+            dailyWheelItems[6] = {type: 'normal', val: normalSkins[Math.floor(Math.random()*normalSkins.length)]};
+            dailyWheelItems[7] = {type: 'epic', val: epicSkins[Math.floor(Math.random()*epicSkins.length)]};
+            dailyWheelItems[8] = {type: 'normal', val: normalSkins[Math.floor(Math.random()*normalSkins.length)]};
+            dailyWheelItems[9] = {type: 'fail', val: 'Better Luck'};
+
+            localStorage.setItem('desiSnakeWheelItems', JSON.stringify(dailyWheelItems));
+            localStorage.setItem('desiSnakeWheelDate', todayStr);
+        } else {
+            dailyWheelItems = JSON.parse(localStorage.getItem('desiSnakeWheelItems'));
+        }
+    }
+
+    window.openSpinWheel = function() {
+        startScreen.classList.add('hidden');
+        spinWheelScreen.classList.remove('hidden');
+        generateDailyWheel();
+        drawSpinWheel();
+        const t = TRANSLATIONS[currentLang];
+        
+        if(Date.now() < nextSpinTime) {
+            doSpinBtn.classList.add('btn-disabled');
+            doSpinBtn.disabled = true;
+            doSpinBtn.innerText = t.comeBack;
+        } else {
+            doSpinBtn.classList.remove('btn-disabled');
+            doSpinBtn.disabled = false;
+            doSpinBtn.innerText = t.spinBtn;
+        }
+        
+        updateSpinTimer();
+    }
+
+    window.closeSpinWheel = function() {
+        spinWheelScreen.classList.add('hidden');
+        startScreen.classList.remove('hidden');
+    }
+
+    function updateSpinTimer() {
+        if(spinWheelScreen.classList.contains('hidden')) return;
+        const now = new Date();
+        const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        const diff = tomorrow - now;
+        const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((diff % (1000 * 60)) / 1000);
+        
+        const t = TRANSLATIONS[currentLang];
+        spinTimer.innerText = `${t.nextReset} ${h}h ${m}m ${s}s`;
+        
+        requestAnimationFrame(updateSpinTimer);
+    }
+
+    function drawSpinWheel() {
+        spinCtx.clearRect(0,0,300,300);
+        const cx = 150, cy = 150, r = 140;
+        const arc = (Math.PI * 2) / 10;
+        const t = TRANSLATIONS[currentLang];
+        
+        spinCtx.save();
+        spinCtx.translate(cx, cy);
+        spinCtx.rotate(spinAngle);
+        
+        dailyWheelItems.forEach((item, i) => {
+            spinCtx.beginPath();
+            spinCtx.moveTo(0,0);
+            spinCtx.arc(0, 0, r, i*arc, (i+1)*arc);
+            spinCtx.fillStyle = (i % 2 === 0) ? '#333' : '#444';
+            if(item.type === 'legendary') spinCtx.fillStyle = '#FFD700';
+            else if(item.type === 'epic') spinCtx.fillStyle = '#9b42f5';
+            else if(item.type === 'fail') spinCtx.fillStyle = '#555';
+            else if(item.type === 'normal') spinCtx.fillStyle = '#29b6f6';
+            spinCtx.fill();
+            spinCtx.stroke();
+            
+            spinCtx.save();
+            spinCtx.rotate(i*arc + arc/2);
+            spinCtx.textAlign = "right";
+            spinCtx.fillStyle = (item.type === 'legendary') ? '#000' : '#fff';
+            spinCtx.font = "bold 12px Arial";
+            spinCtx.fillText(item.type === 'fail' ? t.tryAgain : t.skins, r - 10, 5);
+            spinCtx.restore();
+        });
+        
+        spinCtx.restore();
+        
+        // Draw Needle
+        spinCtx.fillStyle = 'red';
+        spinCtx.beginPath();
+        spinCtx.moveTo(290, 150);
+        spinCtx.lineTo(300, 140);
+        spinCtx.lineTo(300, 160);
+        spinCtx.fill();
+    }
+
+    // --- REVISED SPIN LOGIC ---
+    window.doSpin = function() {
+        if(isSpinning) return;
+        isSpinning = true;
+        doSpinBtn.disabled = true;
+        
+        const roll = Math.random() * 100;
+        let type = 'fail';
+        if(roll < 1) type = 'legendary';
+        else if(roll < 10) type = 'epic';
+        else if(roll < 35) type = 'normal';
+        else type = 'fail';
+        
+        const matchingIndices = [];
+        dailyWheelItems.forEach((item, i) => { if(item.type === type) matchingIndices.push(i); });
+        const targetIndex = matchingIndices[Math.floor(Math.random() * matchingIndices.length)];
+        
+        const arc = (Math.PI * 2) / 10;
+        const currentRotationNormalized = spinAngle % (Math.PI * 2);
+        const sliceCenter = (targetIndex * arc) + (arc / 2);
+        const noise = (Math.random() - 0.5) * (arc * 0.8);
+        const spins = 5; 
+        const targetRotation = (2 * Math.PI - sliceCenter) + noise;
+        
+        let diff = targetRotation - currentRotationNormalized;
+        if(diff < 0) diff += Math.PI * 2;
+        
+        const totalRotationToAdd = (spins * Math.PI * 2) + diff;
+        const startAngle = spinAngle;
+        const duration = 5000; 
+        let startTime = null;
+        
+        function animateSpin(timestamp) {
+            if(!startTime) startTime = timestamp;
+            const elapsed = timestamp - startTime;
+            const t = Math.min(elapsed / duration, 1);
+            const ease = 1 - Math.pow(1 - t, 3);
+            spinAngle = startAngle + (totalRotationToAdd * ease);
+            drawSpinWheel();
+            
+            if (Math.floor(spinAngle * 10) !== Math.floor((spinAngle - (totalRotationToAdd * (ease - (1 - Math.pow(1-(t-0.01),3))))) * 10)) {
+                 playSpinTick();
+            }
+
+            if(t < 1) {
+                requestAnimationFrame(animateSpin);
+            } else {
+                isSpinning = false;
+                handleSpinResult(dailyWheelItems[targetIndex]);
+            }
+        }
+        requestAnimationFrame(animateSpin);
+    }
+
+    function handleSpinResult(item) {
+        const t = TRANSLATIONS[currentLang];
+        if(item.type === 'fail') {
+            playFailSound();
+            showToast(t.betterLuck);
+        } else {
+            const skin = item.val;
+            if(unlockedSkins.includes(skin.id)) {
+                coins += 20;
+                localStorage.setItem('desiSnakeCoins', coins);
+                coinEl.innerText = coins;
+                lobbyCoinsEl.innerText = coins + ' ₹';
+                showToast(`Duplicate! +20 Coins`);
+                if(item.type === 'legendary') playLegendarySound();
+                else playNormalSound();
+            } else {
+                unlockedSkins.push(skin.id);
+                localStorage.setItem('desiSnakeSkins', JSON.stringify(unlockedSkins));
+                showToast(`Unlocked: ${skin.name}!`);
+                if(item.type === 'legendary') playLegendarySound();
+                else if(item.type === 'epic') playEpicSound();
+                else playNormalSound();
+            }
+        }
+        
+        const now = new Date();
+        const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        localStorage.setItem('desiSnakeNextSpinTime', tomorrow.getTime());
+        nextSpinTime = tomorrow.getTime();
+        
+        doSpinBtn.innerText = t.comeBack;
+        doSpinBtn.classList.add('btn-disabled');
+    }
+    
+    function showToast(msg) {
+        toast.innerText = msg;
+        toast.style.opacity = 1;
+        setTimeout(() => toast.style.opacity = 0, 2000);
+    }
+
+    window.openSettings = function() {
+        settingsScreen.classList.remove('hidden');
+        settingsBtnGame.classList.add('hidden');
+
+        const resumeBtn = document.getElementById('settingsResumeBtn');
+        const quitBtn = document.getElementById('settingsQuitBtn');
+        const returnBtn = document.getElementById('settingsReturnLobbyBtn');
+
+        if(isRunning) {
+            isPaused = true;
+            joystickContainer.style.display = 'none';
+            actionsContainer.style.display = 'none';
+            bgMusic.pause(); 
+            if(resumeBtn) resumeBtn.classList.remove('hidden');
+            if(quitBtn) quitBtn.classList.remove('hidden');
+            if(returnBtn) returnBtn.classList.add('hidden');
+        } else {
+            startScreen.classList.add('hidden');
+            if(resumeBtn) resumeBtn.classList.add('hidden');
+            if(quitBtn) quitBtn.classList.add('hidden');
+            if(returnBtn) returnBtn.classList.remove('hidden');
+        }
+    }
+
+    window.closeSettings = function() {
+        settingsScreen.classList.add('hidden');
+        if(isRunning) {
+            isPaused = false;
+            settingsBtnGame.classList.remove('hidden');
+            actionsContainer.style.display = 'flex';
+            if(controlMode === 'joystick') {
+                 joystickContainer.style.display = 'block';
+            }
+            if(musicEnabled) {
+                if(useCustomMusic) bgMusic.play();
+                else {
+                    nextNoteTime = audioCtx.currentTime + 0.1;
+                    scheduleProceduralMusic();
+                }
+            }
+        } else {
+            startScreen.classList.remove('hidden');
+        }
+    }
+
+    window.quitGame = function() {
+        isPaused = false;
+        isRunning = false;
+        resetEntities();
+        bgMusic.pause();
+        bgMusic.currentTime = 0;
+        
+        settingsScreen.classList.add('hidden');
+        gameOverScreen.classList.add('hidden');
+        skinScreen.classList.add('hidden');
+        questScreen.classList.add('hidden');
+        joystickContainer.style.display = 'none';
+        actionsContainer.style.display = 'none'; // HIDE ACTIONS
+        settingsBtnGame.classList.add('hidden');
+        
+        document.querySelectorAll('.game-ui').forEach(el => el.classList.add('hidden'));
+
+        startScreen.classList.remove('hidden');
+        lobbyHighScoreEl.innerText = highScore;
+        lobbyCoinsEl.innerText = coins + ' ₹';
+    }
+
+    // --- INPUT HANDLING (JOYSTICK & BOOST) ---
+    
+    window.addEventListener('mousemove', (e) => {
+        if(controlMode === 'touch') { 
+            mouseX = e.clientX; 
+            mouseY = e.clientY; 
+        }
+        if(joystickActive) {
+            handleJoystickMove({clientX: e.clientX, clientY: e.clientY});
+        }
+    });
+
+    window.addEventListener('touchmove', (e) => {
+        const isMenuOpen = !startScreen.classList.contains('hidden') || 
+                           !skinScreen.classList.contains('hidden') || 
+                           !settingsScreen.classList.contains('hidden') ||
+                           !spinWheelScreen.classList.contains('hidden') ||
+                           !questScreen.classList.contains('hidden') ||
+                           !gameOverScreen.classList.contains('hidden');
+
+        if(!isPaused && isRunning && !isMenuOpen) { 
+            if(controlMode === 'touch') {
+                e.preventDefault();
+                mouseX = e.touches[0].clientX;
+                mouseY = e.touches[0].clientY;
+            } else if (controlMode === 'joystick' && joystickActive) {
+                e.preventDefault();
+                handleJoystickMove(e.touches[0]);
+            }
+        }
+    }, {passive: false});
+    
+    // Joystick Listeners
+    joystickContainer.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        joystickActive = true;
+        const rect = joystickContainer.getBoundingClientRect();
+        joystickCenter = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
+        handleJoystickMove({clientX: e.clientX, clientY: e.clientY});
+    });
+
+    joystickContainer.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        joystickActive = true;
+        const rect = joystickContainer.getBoundingClientRect();
+        joystickCenter = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
+        handleJoystickMove(e.touches[0]);
+    }, {passive: false});
+
+    window.addEventListener('mouseup', (e) => {
+        if(joystickActive) {
+            joystickActive = false;
+            joystickKnob.style.transform = `translate(-50%, -50%)`;
+        }
+    });
+
+    joystickContainer.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        joystickActive = false;
+        joystickKnob.style.transform = `translate(-50%, -50%)`;
+    });
+    
+    function handleJoystickMove(input) {
+        const dx = input.clientX - joystickCenter.x;
+        const dy = input.clientY - joystickCenter.y;
+        joystickAngle = Math.atan2(dy, dx);
+        const distance = Math.min(Math.sqrt(dx*dx + dy*dy), MAX_JOYSTICK_RADIUS);
+        const knobX = Math.cos(joystickAngle) * distance;
+        const knobY = Math.sin(joystickAngle) * distance;
+        joystickKnob.style.transform = `translate(calc(-50% + ${knobX}px), calc(-50% + ${knobY}px))`;
+    }
+
+    // --- ABILITY LOGIC ---
+    window.activateMagnet = function() {
+        if(Date.now() >= magnetCooldownEnd) {
+            magnetActive = true;
+            magnetEndTime = Date.now() + MAGNET_DURATION;
+            magnetCooldownEnd = Date.now() + MAGNET_COOLDOWN;
+            showToast("Magnet Active!");
+        }
+    }
+
+    window.activateShield = function() {
+        if(Date.now() >= shieldCooldownEnd) {
+            shieldActive = true;
+            shieldEndTime = Date.now() + SHIELD_DURATION;
+            shieldCooldownEnd = Date.now() + SHIELD_COOLDOWN;
+            showToast("Shield Active!");
+        }
+    }
+    
+    window.activateBoost = function() {
+        if(Date.now() >= boostCooldownEnd) {
+            boostActive = true;
+            boostEndTime = Date.now() + BOOST_DURATION;
+            boostCooldownEnd = Date.now() + BOOST_COOLDOWN;
+            showToast("Speed Boost!");
+        }
+    }
+
+    window.activateMagnify = function() {
+        if(Date.now() >= magnifyCooldownEnd) {
+            magnifyActive = true;
+            magnifyEndTime = Date.now() + MAGNIFY_DURATION;
+            magnifyCooldownEnd = Date.now() + MAGNIFY_COOLDOWN;
+            showToast("Zoom Out!");
+        }
+    }
+
+    // --- KEYBOARD LISTENERS ---
+    window.addEventListener('keydown', (e) => {
+        if(!e.repeat) {
+            if(e.code === 'Space') activateBoost();
+            if(e.code === 'KeyZ') activateMagnet();
+            if(e.code === 'KeyX') activateShield();
+            if(e.code === 'KeyC') activateMagnify();
+        }
+    });
+
+    // --- LEADERBOARD LOGIC ---
+    function updateLeaderboard() {
+        const playerEntry = { name: playerName, score: score, isPlayer: true };
+        const botEntries = enemies.map(e => ({ name: e.name, score: e.score, isPlayer: false }));
+        const allPlayers = [...botEntries, playerEntry];
+        allPlayers.sort((a, b) => b.score - a.score);
+        
+        lbContent.innerHTML = '';
+        const top5 = allPlayers.slice(0, 5);
+        
+        top5.forEach((p, index) => {
+            const row = document.createElement('div');
+            row.className = `lb-row ${p.isPlayer ? 'player-row' : ''}`;
+            const rank = document.createElement('div');
+            rank.className = 'lb-rank';
+            rank.innerText = `#${index + 1}`;
+            const name = document.createElement('div');
+            name.className = 'lb-name';
+            name.innerText = p.name;
+            const scoreDiv = document.createElement('div');
+            scoreDiv.className = 'lb-score';
+            scoreDiv.innerText = p.score;
+            row.appendChild(rank);
+            row.appendChild(name);
+            row.appendChild(scoreDiv);
+            lbContent.appendChild(row);
+        });
+    }
+
+    // --- ENEMY LOGIC ---
+    function initEnemies() {
+        enemies = [];
+        for(let i=0; i<7; i++) { 
+            spawnEnemy(i);
+        }
+    }
+
+    function spawnEnemy(index) {
+        const name = getBotName();
+        const randomSkin = SKINS[Math.floor(Math.random() * 8)].id; 
+        const x = Math.random() * WORLD_SIZE;
+        const y = Math.random() * WORLD_SIZE;
+        
+        let newEnemy = {
+            name: name,
+            x: x,
+            y: y,
+            angle: Math.random() * Math.PI * 2,
+            history: [],
+            length: INITIAL_LENGTH,
+            score: Math.floor(Math.random() * 100) + 50,
+            skin: randomSkin,
+            wanderTarget: { x: Math.random()*WORLD_SIZE, y: Math.random()*WORLD_SIZE },
+            wanderTimer: 0
+        };
+        
+        for(let j=0; j<INITIAL_LENGTH * SEGMENT_DISTANCE; j++) {
+            newEnemy.history.push({x: x, y: y});
+        }
+        
+        if (index < enemies.length) enemies[index] = newEnemy;
+        else enemies.push(newEnemy);
+    }
+
+    function updateEnemies() {
+        enemies.forEach((bot, index) => {
+            if(bot.x < 0 || bot.x > WORLD_SIZE || bot.y < 0 || bot.y > WORLD_SIZE) {
+                convertSnakeToFood(bot);
+                spawnEnemy(index);
+                return; 
+            }
+
+            const lookDist = 100;
+            const feelers = [bot.angle - 0.5, bot.angle, bot.angle + 0.5];
+            
+            let danger = false;
+            let bestEscapeAngle = bot.angle;
+            
+            for(let a of feelers) {
+                const tx = bot.x + Math.cos(a) * lookDist;
+                const ty = bot.y + Math.sin(a) * lookDist;
+                
+                if(tx < 0 || tx > WORLD_SIZE || ty < 0 || ty > WORLD_SIZE) {
+                    danger = true;
+                    bestEscapeAngle = Math.atan2(WORLD_SIZE/2 - bot.y, WORLD_SIZE/2 - bot.x);
+                    break;
+                }
+                
+                for(let i=0; i<snake.history.length; i+=5) {
+                    if(Math.hypot(tx - snake.history[i].x, ty - snake.history[i].y) < SNAKE_WIDTH + 10) {
+                        danger = true;
+                        bestEscapeAngle = bot.angle + Math.PI/2; 
+                        break;
+                    }
+                }
+                if(danger) break;
+                
+                for(let ob of enemies) {
+                    if(ob === bot) continue;
+                    for(let i=0; i<ob.history.length; i+=5) {
+                        if(Math.hypot(tx - ob.history[i].x, ty - ob.history[i].y) < SNAKE_WIDTH + 10) {
+                            danger = true;
+                            bestEscapeAngle = bot.angle + Math.PI/2;
+                            break;
+                        }
+                    }
+                    if(danger) break;
+                }
+                if(danger) break;
+            }
+            
+            if(danger) {
+                let diff = bestEscapeAngle - bot.angle;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                bot.angle += Math.sign(diff) * 0.15; 
+            } else {
+                let targetX = bot.wanderTarget.x;
+                let targetY = bot.wanderTarget.y;
+                let hunting = false;
+                
+                const dToPlayer = Math.hypot(snake.x - bot.x, snake.y - bot.y);
+                if(dToPlayer < 300) {
+                    targetX = snake.x + Math.cos(snake.angle) * 100;
+                    targetY = snake.y + Math.sin(snake.angle) * 100;
+                    hunting = true;
+                } else {
+                    let closestFood = null;
+                    let minDist = 600;
+                    for(let f of foods) {
+                        let d = Math.hypot(f.x - bot.x, f.y - bot.y);
+                        if(d < minDist) {
+                            minDist = d;
+                            closestFood = f;
+                        }
+                    }
+                    if(closestFood) {
+                        targetX = closestFood.x;
+                        targetY = closestFood.y;
+                    } else {
+                        bot.wanderTimer++;
+                        if(bot.wanderTimer > 200 || Math.hypot(bot.x - bot.wanderTarget.x, bot.y - bot.wanderTarget.y) < 100) {
+                            bot.wanderTarget = {
+                                x: Math.random() * (WORLD_SIZE - 200) + 100,
+                                y: Math.random() * (WORLD_SIZE - 200) + 100
+                            };
+                            bot.wanderTimer = 0;
+                        }
+                    }
+                }
+                
+                let desiredAngle = Math.atan2(targetY - bot.y, targetX - bot.x);
+                let diff = desiredAngle - bot.angle;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                bot.angle += diff * 0.08; 
+            }
+
+            bot.x += Math.cos(bot.angle) * BASE_SPEED;
+            bot.y += Math.sin(bot.angle) * BASE_SPEED;
+
+            bot.history.unshift({x: bot.x, y: bot.y});
+            if (bot.history.length > bot.length * SEGMENT_DISTANCE + 20) bot.history.pop();
+            
+            for (let i = foods.length - 1; i >= 0; i--) {
+                const f = foods[i];
+                if (Math.hypot(bot.x - f.x, bot.y - f.y) < SNAKE_WIDTH/2 + f.radius) {
+                    bot.score += f.score;
+                    bot.length += 1; 
+                    foods.splice(i, 1);
+                    spawnFood();
+                }
+            }
+        });
+    }
+
+    // --- GAME LOOP ---
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        miniMapCanvas.width = 120;
+        miniMapCanvas.height = 120;
+        initWeather(); 
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function resetEntities() {
+        snake = { x: WORLD_SIZE / 2, y: WORLD_SIZE / 2, angle: -Math.PI / 2, history: [], length: INITIAL_LENGTH };
+        for(let i=0; i<INITIAL_LENGTH * SEGMENT_DISTANCE; i++) {
+            snake.history.push({x: snake.x, y: snake.y + i});
+        }
+        foods = [];
+        for(let i=0; i<FOOD_COUNT; i++) spawnFood();
+        score = 0;
+        scoreEl.innerText = score; 
+        currentSpeed = BASE_SPEED;
+        
+        magnetActive = false; shieldActive = false; boostActive = false; magnifyActive = false;
+        magnetCooldownEnd = 0; shieldCooldownEnd = 0; boostCooldownEnd = 0; magnifyCooldownEnd = 0;
+        
+        sessionStats = { score: 0, kills: 0, foodEaten: 0, length: INITIAL_LENGTH };
+        
+        initEnemies();
+        initWeather();
+    }
+
+    function spawnFood() {
+        if(Math.random() < 0.05) { 
+             foods.push({ x: Math.random() * WORLD_SIZE, y: Math.random() * WORLD_SIZE, name: 'Coin', color: '#ffd700', score: 0, radius: 12 });
+             return;
+        }
+        let types = (currentMap === 'gateway') ? gatewayFoodTypes : himalayaFoodTypes;
+        const type = types[Math.floor(Math.random() * types.length)];
+        foods.push({ x: Math.random() * WORLD_SIZE, y: Math.random() * WORLD_SIZE, ...type });
+    }
+
+    function startGame() {
+        if (gameMode === 'online') {
+            showToast('Multiplayer Coming Soon!');
+            return;
+        }
+
+        generateQuests(); 
+        const inputName = playerNameInput.value.trim();
+        if(inputName) playerName = inputName;
+        else playerName = "Player";
+        
+        startScreen.classList.add('hidden');
+        gameOverScreen.classList.add('hidden');
+        skinScreen.classList.add('hidden'); 
+        spinWheelScreen.classList.add('hidden');
+        questScreen.classList.add('hidden');
+        settingsBtnGame.classList.remove('hidden');
+
+        document.querySelectorAll('.game-ui').forEach(el => el.classList.remove('hidden'));
+
+        actionsContainer.style.display = 'flex';
+        // Always show boost btn (even in touch mode as requested)
+        boostBtn.style.display = 'flex'; 
+
+        if(controlMode === 'joystick') {
+            joystickContainer.style.display = 'block';
+        } else {
+            joystickContainer.style.display = 'none';
+        }
+        
+        resetEntities();
+        isRunning = true;
+        isPaused = false;
+        
+        startMusic(); 
+    }
+
+    function endGame(reason) {
+        isRunning = false; 
+        bgMusic.pause();
+        playGameOverSound(); 
+        
+        let questCompleted = false;
+        sessionStats.score = score;
+        sessionStats.length = snake.length; 
+        
+        dailyQuests.forEach(q => {
+            if(!q.completed) {
+                if(q.type === 'score' && sessionStats.score >= q.target) q.completed = true;
+                if(q.type === 'food' && sessionStats.foodEaten >= q.target) q.completed = true;
+                if(q.type === 'kills' && sessionStats.kills >= q.target) q.completed = true;
+                if(q.type === 'length' && sessionStats.length >= q.target) q.completed = true;
+                
+                if(q.completed) questCompleted = true;
+            }
+        });
+        
+        if(questCompleted) {
+             localStorage.setItem('desiSnakeQuests', JSON.stringify(dailyQuests));
+             showToast("Quest Completed! Check Menu.");
+        }
+        
+        if(score > highScore) {
+            highScore = score;
+            localStorage.setItem('desiSnakeIoHighScore', highScore);
+            highScoreEl.innerText = highScore;
+            lobbyHighScoreEl.innerText = highScore;
+            reason += " New High Score!";
+        }
+        finalScoreDisplay.innerText = "Score: " + score;
+        flavorText.innerText = reason;
+        gameOverScreen.classList.remove('hidden');
+        joystickContainer.style.display = 'none'; 
+        actionsContainer.style.display = 'none';
+        settingsBtnGame.classList.add('hidden');
+    }
+
+    function update() {
+        if(isPaused || !isRunning) return;
+        
+        updateEnemies();
+        updateLeaderboard();
+        
+        const now = Date.now();
+
+        // --- ABILITY TIMERS & VISUALS ---
+
+        // 1. Magnet
+        if(magnetActive && now > magnetEndTime) magnetActive = false;
+        let magProg = 0;
+        if (now < magnetCooldownEnd) magProg = ((magnetCooldownEnd - now) / MAGNET_COOLDOWN) * 100;
+        magnetBtn.style.setProperty('--cooldown', magProg + '%');
+
+        // 2. Shield
+        if(shieldActive && now > shieldEndTime) shieldActive = false;
+        let shieldProg = 0;
+        if (now < shieldCooldownEnd) shieldProg = ((shieldCooldownEnd - now) / SHIELD_COOLDOWN) * 100;
+        shieldBtn.style.setProperty('--cooldown', shieldProg + '%');
+
+        // 3. Boost (Timer Based)
+        if(boostActive && now > boostEndTime) boostActive = false;
+        let boostProg = 0;
+        if (now < boostCooldownEnd) boostProg = ((boostCooldownEnd - now) / BOOST_COOLDOWN) * 100;
+        boostBtn.style.setProperty('--cooldown', boostProg + '%');
+
+        // 4. Magnify
+        if(magnifyActive && now > magnifyEndTime) magnifyActive = false;
+        let magfProg = 0;
+        if (now < magnifyCooldownEnd) magfProg = ((magnifyCooldownEnd - now) / MAGNIFY_COOLDOWN) * 100;
+        magnifyBtn.style.setProperty('--cooldown', magfProg + '%');
+
+        // --- APPLY EFFECTS ---
+
+        // Speed Boost
+        if (boostActive) {
+            currentSpeed = BOOST_SPEED;
+        } else {
+            currentSpeed = BASE_SPEED;
+        }
+
+        // Smooth Zoom
+        let targetZoom = magnifyActive ? 0.6 : 1.0;
+        currentZoom += (targetZoom - currentZoom) * 0.05; // Smooth transition
+
+        let targetA = snake.angle;
+        if (controlMode === 'touch') {
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            targetA = Math.atan2(mouseY - centerY, mouseX - centerX);
+        } else if (controlMode === 'joystick' && joystickActive) {
+            targetA = joystickAngle;
+        }
+
+        let diff = targetA - snake.angle;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        snake.angle += diff * TURN_SPEED;
+
+        snake.x += Math.cos(snake.angle) * currentSpeed;
+        snake.y += Math.sin(snake.angle) * currentSpeed;
+
+        snake.history.unshift({x: snake.x, y: snake.y});
+        if (snake.history.length > snake.length * SEGMENT_DISTANCE + 50) snake.history.pop(); 
+
+        if (snake.x < 0 || snake.x > WORLD_SIZE || snake.y < 0 || snake.y > WORLD_SIZE) {
+            convertSnakeToFood(snake); 
+            endGame("You fell off the world!");
+            return;
+        }
+
+        for (let i = foods.length - 1; i >= 0; i--) {
+            const f = foods[i];
+            
+            // --- MAGNET LOGIC ---
+            if(magnetActive) {
+                const distToHead = Math.hypot(snake.x - f.x, snake.y - f.y);
+                if(distToHead < 400) { // Range
+                    const angleToHead = Math.atan2(snake.y - f.y, snake.x - f.x);
+                    f.x += Math.cos(angleToHead) * 15; // Fly speed
+                    f.y += Math.sin(angleToHead) * 15;
+                }
+            }
+            
+            const dx = snake.x - f.x;
+            const dy = snake.y - f.y;
+            if (Math.sqrt(dx*dx + dy*dy) < SNAKE_WIDTH/2 + f.radius) {
+                if(f.name === 'Coin') {
+                    coins += 1;
+                    localStorage.setItem('desiSnakeCoins', coins);
+                    coinEl.innerText = coins;
+                    lobbyCoinsEl.innerText = coins + ' ₹';
+                } else {
+                    score += f.score;
+                    scoreEl.innerText = score; 
+                    if(f.name !== 'MiniModak') { 
+                        snake.length += 1; 
+                        sessionStats.foodEaten++; 
+                    }
+                    
+                    if(score % 50 === 0) {
+                        coins += 1;
+                        localStorage.setItem('desiSnakeCoins', coins);
+                        coinEl.innerText = coins;
+                        lobbyCoinsEl.innerText = coins + ' ₹';
+                    }
+                }
+                
+                foods.splice(i, 1);
+                if(f.name !== 'MiniModak') spawnFood();
+            }
+        }
+
+        for (let bot of enemies) {
+            for (let i = SEGMENT_DISTANCE; i < bot.history.length; i += SEGMENT_DISTANCE) {
+                let seg = bot.history[i];
+                if (Math.hypot(snake.x - seg.x, snake.y - seg.y) < SNAKE_WIDTH) {
+                    if (shieldActive) {
+                        // BUMP EFFECT (Optional visual feedback)
+                    } else {
+                        convertSnakeToFood(snake);
+                        endGame("You ran into " + bot.name);
+                        return;
+                    }
+                }
+            }
+        }
+
+        enemies.forEach((bot, index) => {
+            for (let i = SEGMENT_DISTANCE; i < snake.history.length; i += SEGMENT_DISTANCE) {
+                let seg = snake.history[i];
+                if (Math.hypot(bot.x - seg.x, bot.y - seg.y) < SNAKE_WIDTH) {
+                    convertSnakeToFood(bot);
+                    spawnEnemy(index); 
+                    showToast("Killed " + bot.name + "!");
+                    score += 100; 
+                    scoreEl.innerText = score;
+                    sessionStats.kills++; 
+                    return; 
+                }
+            }
+        });
+
+        for (let i = 0; i < enemies.length; i++) {
+            let botA = enemies[i];
+            for (let j = 0; j < enemies.length; j++) {
+                if (i === j) continue; 
+                let botB = enemies[j];
+                
+                for (let k = SEGMENT_DISTANCE; k < botB.history.length; k += SEGMENT_DISTANCE) {
+                    let seg = botB.history[k];
+                    if (Math.hypot(botA.x - seg.x, botA.y - seg.y) < SNAKE_WIDTH) {
+                        convertSnakeToFood(botA);
+                        spawnEnemy(i); 
+                        break; 
+                    }
+                }
+            }
+        }
+    }
+
+    // --- DRAWING FUNCTIONS ---
+    function initWeather() {
+        weatherParticles.length = 0;
+        for(let i=0; i<PARTICLE_COUNT; i++) {
+            weatherParticles.push({
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight,
+                len: Math.random() * 20 + 10,
+                speed: Math.random() * 5 + 5,
+                sway: Math.random() * Math.PI * 2,
+                radius: Math.random() * 2 + 1
+            });
+        }
+    }
+// --- ULTRA-REALISTIC 3D FOOD DRAWING ---
+
+    function drawDropShadow(ctx, x, y, size) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.beginPath();
+        ctx.ellipse(x, y + size * 0.5, size * 0.9, size * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // --- MAHARASHTRA FOODS ---
+
+    function drawModak(ctx, x, y, size) {
+        drawDropShadow(ctx, x, y, size);
+        // Ivory White body with soft shading
+        let grad = ctx.createRadialGradient(x - size/3, y - size/3, 0, x, y, size);
+        grad.addColorStop(0, "#ffffff");
+        grad.addColorStop(1, "#e0e0e0");
+        ctx.fillStyle = grad;
+
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 1.4); // Higher tip
+        ctx.bezierCurveTo(x - size, y, x - size, y + size, x, y + size);
+        ctx.bezierCurveTo(x + size, y + size, x + size, y, x, y - size * 1.4);
+        ctx.fill();
+
+        // Realistic Pleats (Shading)
+        ctx.strokeStyle = 'rgba(0,0,0,0.15)'; 
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x, y - size * 1.4); ctx.quadraticCurveTo(x - size*0.6, y, x - size*0.3, y + size);
+        ctx.moveTo(x, y - size * 1.4); ctx.quadraticCurveTo(x + size*0.6, y, x + size*0.3, y + size);
+        ctx.moveTo(x, y - size * 1.4); ctx.lineTo(x, y + size);
+        ctx.stroke();
+    }
+
+    function drawVadaPav(ctx, x, y, size) {
+        drawDropShadow(ctx, x, y, size);
+        // Bun: Golden baked gradient
+        let bunGrad = ctx.createRadialGradient(x - size/3, y - size/3, 2, x, y, size);
+        bunGrad.addColorStop(0, "#eecfa1");
+        bunGrad.addColorStop(1, "#cd853f");
+        ctx.fillStyle = bunGrad;
+        ctx.beginPath(); ctx.ellipse(x, y+3, size, size*0.7, 0, 0, Math.PI*2); ctx.fill();
+
+        // Vada: Textured gold
+        let vadaGrad = ctx.createRadialGradient(x, y, 1, x, y, size*0.7);
+        vadaGrad.addColorStop(0, "#ffd700");
+        vadaGrad.addColorStop(1, "#daabb0");
+        ctx.fillStyle = vadaGrad;
+        ctx.beginPath(); ctx.arc(x, y, size*0.65, 0, Math.PI*2); ctx.fill();
+
+        // Shiny Green Chili
+        ctx.strokeStyle = '#32cd32'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(x+size*0.4, y-size*0.4); ctx.quadraticCurveTo(x+size, y, x+size*0.6, y+size*0.6); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 1; ctx.stroke(); // Glint
+    }
+
+    function drawLaddu(ctx, x, y, size) {
+        drawDropShadow(ctx, x, y, size);
+        // Laddu Body (Golden Yellow with texture)
+        let grad = ctx.createRadialGradient(x-size/3, y-size/3, 0, x, y, size);
+        grad.addColorStop(0, "#ffd700"); 
+        grad.addColorStop(1, "#daabb0"); // Slightly darker shading
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI*2); ctx.fill();
+
+        // Texture (Grainy look) - Deterministic
+        ctx.fillStyle = 'rgba(218, 165, 32, 0.6)';
+        for(let i=0; i<5; i++) {
+             // Deterministic dots using fixed position math to prevent spinning
+             let angle = (x * y + i * 10) % 6.28;
+             let dist = (x + i * 5) % (size * 0.8);
+             ctx.beginPath(); 
+             ctx.arc(x + Math.cos(angle)*dist, y + Math.sin(angle)*dist, 1, 0, Math.PI*2); 
+             ctx.fill();
+        }
+
+        // Cashew on Top
+        ctx.beginPath();
+        ctx.strokeStyle = '#FFF8DC'; // Cornsilk color
+        ctx.lineWidth = size * 0.4;
+        ctx.lineCap = 'round';
+        ctx.arc(x, y, size*0.3, 3.5, 5.5); // Crescent arc
+        ctx.stroke();
+        
+        // Reset line settings
+        ctx.lineWidth = 1;
+    }
+
+    // NEW DISH: Misal Pav (Bowl with red gravy & yellow farsan)
+    function drawMisalPav(ctx, x, y, size) {
+        drawDropShadow(ctx, x, y, size);
+        // Steel Bowl Rim
+        ctx.strokeStyle = '#c0c0c0'; ctx.lineWidth = 2; ctx.fillStyle = '#222';
+        ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+
+        // Red Spicy Gravy (Tari)
+        let gravy = ctx.createRadialGradient(x, y, 1, x, y, size-2);
+        gravy.addColorStop(0, "#ff4500");
+        gravy.addColorStop(1, "#800000");
+        ctx.fillStyle = gravy;
+        ctx.beginPath(); ctx.arc(x, y, size-2, 0, Math.PI*2); ctx.fill();
+
+        // Yellow Farsan (Crunchy toppings) - FIXED to be deterministic (no spinning)
+        ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 2;
+        // Use x and y to seed the random positions so they stay static
+        for(let i=0; i<6; i++) {
+            // Simple pseudo-random using sin/cos of position + index
+            let angle = (x + y + i * 50) % (Math.PI * 2); 
+            let dist = ((x * y * (i+1)) % 100) / 100 * (size * 0.6);
+            
+            let rx = x + Math.cos(angle) * dist;
+            let ry = y + Math.sin(angle) * dist;
+            
+            ctx.beginPath(); ctx.moveTo(rx, ry); ctx.lineTo(rx+4, ry+4); ctx.stroke();
+        }
+        // Oil reflection
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.beginPath(); ctx.arc(x-size/3, y-size/3, 3, 0, Math.PI*2); ctx.fill();
+    }
+
+    // --- HIMALAYAN FOODS ---
+
+    function drawFriedMomo(ctx, x, y, size) {
+        drawDropShadow(ctx, x, y, size);
+        // Crispy Golden Gradient
+        let grad = ctx.createRadialGradient(x-5, y-5, 2, x, y, size);
+        grad.addColorStop(0, "#ffa500");
+        grad.addColorStop(1, "#8b4500");
+        ctx.fillStyle = grad;
+
+        // Crescent Shape
+        ctx.beginPath(); ctx.arc(x, y, size, 0.1 * Math.PI, 0.9 * Math.PI, true);
+        ctx.quadraticCurveTo(x, y + size*0.5, x + size, y + size*0.3); // Curve back
+        ctx.fill();
+
+        // Texture dots
+        ctx.fillStyle = 'rgba(139,69,19,0.3)';
+        ctx.beginPath(); ctx.arc(x, y, 1, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x+5, y-2, 1, 0, Math.PI*2); ctx.fill();
+    }
+
+    // NEW DISH: Sel Roti (Rice Ring/Donut)
+    function drawSelRoti(ctx, x, y, size) {
+        drawDropShadow(ctx, x, y, size);
+        // Reddish Brown Rice Flour Texture
+        let grad = ctx.createRadialGradient(x-5, y-5, 2, x, y, size);
+        grad.addColorStop(0, "#d2691e"); // Chocolate
+        grad.addColorStop(1, "#8b4513"); // SaddleBrown
+        ctx.fillStyle = grad;
+
+        // Ring Shape (Donut)
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI*2, false); // Outer
+        ctx.arc(x, y, size*0.4, 0, Math.PI*2, true); // Inner hole
+        ctx.fill();
+
+        // Rough Texture
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(x, y, size*0.7, 0, Math.PI*1.5); ctx.stroke();
+    }
+
+    // NEW DISH: Thukpa (Noodle Soup)
+    function drawThukpa(ctx, x, y, size) {
+        drawDropShadow(ctx, x, y, size);
+        // Bowl
+        ctx.fillStyle = '#2F4F4F';
+        ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI*2); ctx.fill();
+        
+        // Broth
+        ctx.fillStyle = '#d2b48c'; // Tan broth
+        ctx.beginPath(); ctx.arc(x, y, size-2, 0, Math.PI*2); ctx.fill();
+
+        // Noodles (Squiggly lines)
+        ctx.strokeStyle = '#fffacd'; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x-size/2, y); ctx.quadraticCurveTo(x, y-size/2, x+size/2, y);
+        ctx.moveTo(x-size/2, y+5); ctx.quadraticCurveTo(x, y+size/2, x+size/2, y+5);
+        ctx.stroke();
+
+        // Green Onion garnish
+        ctx.fillStyle = '#006400';
+        ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x+5, y-5, 2, 0, Math.PI*2); ctx.fill();
+    }
+
+    // NEW DISH: Aloo Dum (Spicy Red Potato)
+    function drawAlooDum(ctx, x, y, size) {
+        drawDropShadow(ctx, x, y, size);
+        // Spicy Red Coating
+        let grad = ctx.createRadialGradient(x-3, y-3, 1, x, y, size);
+        grad.addColorStop(0, "#ff6347"); // Tomato
+        grad.addColorStop(1, "#b22222"); // FireBrick
+        ctx.fillStyle = grad;
+
+        // Irregular Potato Shape
+        ctx.beginPath();
+        ctx.moveTo(x - size, y);
+        ctx.quadraticCurveTo(x - size, y - size, x, y - size);
+        ctx.quadraticCurveTo(x + size, y - size, x + size, y);
+        ctx.quadraticCurveTo(x + size, y + size, x, y + size);
+        ctx.quadraticCurveTo(x - size, y + size, x - size, y);
+        ctx.fill();
+
+        // Sesame Seeds (White dots)
+        ctx.fillStyle = '#fff8dc';
+        ctx.beginPath(); ctx.arc(x-4, y-2, 1.5, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x+2, y+4, 1.5, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x+5, y-5, 1.5, 0, Math.PI*2); ctx.fill();
+    }
+
+    function drawCoin(ctx, x, y, size) {
+        drawDropShadow(ctx, x, y, size);
+        // Outer Gold Ring (3D)
+        let ringGrad = ctx.createLinearGradient(x-size, y-size, x+size, y+size);
+        ringGrad.addColorStop(0, "#ffd700");
+        ringGrad.addColorStop(1, "#b8860b");
+        ctx.fillStyle = ringGrad;
+        ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI*2); ctx.fill();
+
+        // Inner Face
+        let faceGrad = ctx.createRadialGradient(x, y, size/2, x, y, size);
+        faceGrad.addColorStop(0, "#ffec8b");
+        faceGrad.addColorStop(1, "#daa520");
+        ctx.fillStyle = faceGrad;
+        ctx.beginPath(); ctx.arc(x, y, size-3, 0, Math.PI*2); ctx.fill();
+
+        // Embossed Text
+        ctx.fillStyle = '#b8860b';
+        ctx.font = 'bold ' + (size*1.2) + 'px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(255,255,255,0.8)'; ctx.shadowBlur = 1; ctx.shadowOffsetX = 1; ctx.shadowOffsetY = 1;
+        ctx.fillText('₹', x, y+2);
+        ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+
+        // Specular Shine
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.beginPath(); ctx.arc(x-size/2.5, y-size/2.5, size/4, 0, Math.PI*2); ctx.fill();
+    }
+
+    function drawSnake(ctx, targetSnake, targetSkin) {
+        if(!targetSnake || !targetSnake.history || targetSnake.history.length === 0) return;
+        
+        // --- VISUAL STABILITY FIX: DISTANCE-BASED DRAWING ---
+        const SEGMENT_SPACING = 12; // Fixed spacing between circles regardless of speed
+        
+        let drawnCount = 0;
+        let distAcc = 0;
+        
+        // Shield Ghost Effect
+        if (targetSnake === snake && shieldActive) {
+            ctx.globalAlpha = 0.5;
+        }
+
+        // Draw body by traversing history and accumulating distance
+        for (let i = 1; i < targetSnake.history.length; i++) {
+            const prev = targetSnake.history[i-1];
+            const curr = targetSnake.history[i];
+            
+            const dist = Math.hypot(curr.x - prev.x, curr.y - prev.y);
+            distAcc += dist;
+            
+            if (distAcc >= SEGMENT_SPACING) {
+                const seg = curr;
+                const segIndex = drawnCount;
+                
+                // Style Logic
+                if(targetSkin === 'default') {
+                    if (segIndex % 3 === 0) ctx.fillStyle = '#ff9933';
+                    else if (segIndex % 3 === 1) ctx.fillStyle = '#ffffff';
+                    else ctx.fillStyle = '#138808';
+                }
+                else if(targetSkin === 'red') ctx.fillStyle = (segIndex % 2 === 0) ? '#ff0000' : '#800000';
+                else if(targetSkin === 'black') ctx.fillStyle = (segIndex % 2 === 0) ? '#1a1a1a' : '#333333';
+                else if(targetSkin === 'orange') ctx.fillStyle = (segIndex % 2 === 0) ? '#ff8800' : '#cc6600';
+                else if(targetSkin === 'purple') ctx.fillStyle = (segIndex % 2 === 0) ? '#800080' : '#4b0082';
+                else if(targetSkin === 'yellow') ctx.fillStyle = (segIndex % 2 === 0) ? '#ffeb3b' : '#fdd835';
+                else if(targetSkin === 'green') ctx.fillStyle = (segIndex % 2 === 0) ? '#4caf50' : '#2e7d32';
+                else if(targetSkin === 'pink') ctx.fillStyle = (segIndex % 2 === 0) ? '#e91e63' : '#c2185b';
+                else if(targetSkin === 'gold') { ctx.fillStyle = (segIndex % 2 === 0) ? '#ffd700' : '#daa520'; ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 10; }
+                else if(targetSkin === 'rangoli') { const hue = (Date.now() * 0.1 + segIndex * 30) % 360; ctx.fillStyle = `hsl(${hue}, 100%, 50%)`; }
+                else if(targetSkin === 'tiger') { if (segIndex % 2 === 0) ctx.fillStyle = '#ff9900'; else ctx.fillStyle = '#1a1a1a'; }
+                else if(targetSkin === 'peacock') { if (segIndex % 2 === 0) ctx.fillStyle = '#008080'; else ctx.fillStyle = '#32cd32'; }
+                else if(targetSkin === 'kaleidoscope') {
+                    const angle = (Date.now() * 0.005) + (segIndex * 0.5);
+                    ctx.save(); ctx.translate(seg.x, seg.y); ctx.rotate(angle);
+                    ctx.fillStyle = `hsl(${(angle * 50) % 360}, 70%, 50%)`;
+                    ctx.beginPath(); ctx.arc(0, 0, SNAKE_WIDTH/2, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = `hsl(${((angle * 50) + 180) % 360}, 80%, 60%)`;
+                    ctx.beginPath(); for(let k=0; k<3; k++) { ctx.lineTo(Math.cos(k * 2.09) * (SNAKE_WIDTH/2.5), Math.sin(k * 2.09) * (SNAKE_WIDTH/2.5)); } ctx.fill();
+                    ctx.restore(); 
+                    distAcc -= SEGMENT_SPACING; 
+                    drawnCount++;
+                    if (drawnCount >= targetSnake.length) break;
+                    continue; 
+                }
+                else if(targetSkin === 'legend1') { const pulse = 15 + Math.sin(Date.now() / 150) * 5; ctx.shadowBlur = pulse; ctx.shadowColor = '#00ffff'; ctx.fillStyle = '#000000'; ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(seg.x, seg.y, SNAKE_WIDTH/2 - 1, 0, Math.PI*2); ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(seg.x, seg.y, SNAKE_WIDTH/6, 0, Math.PI*2); ctx.fill(); 
+                    distAcc -= SEGMENT_SPACING; drawnCount++; if (drawnCount >= targetSnake.length) break; continue; }
+                else if(targetSkin === 'legend2') { ctx.globalCompositeOperation = 'lighter'; const hue = (Date.now() * 0.2 - segIndex * 10) % 360; ctx.shadowBlur = 20; ctx.shadowColor = `hsl(${hue}, 100%, 50%)`; ctx.fillStyle = `hsla(${hue}, 100%, 60%, 0.8)`; ctx.beginPath(); ctx.arc(seg.x, seg.y, SNAKE_WIDTH/2, 0, Math.PI*2); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; 
+                    distAcc -= SEGMENT_SPACING; drawnCount++; if (drawnCount >= targetSnake.length) break; continue; }
+                else if(targetSkin === 'legend3') { const pulse = 20 + Math.sin(Date.now() / 200) * 10; ctx.shadowBlur = pulse; ctx.shadowColor = '#ff0000'; ctx.fillStyle = '#050505'; ctx.strokeStyle = '#ff0000'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(seg.x, seg.y, SNAKE_WIDTH/2, 0, Math.PI*2); ctx.fill(); ctx.stroke(); 
+                    distAcc -= SEGMENT_SPACING; drawnCount++; if (drawnCount >= targetSnake.length) break; continue; }
+                else if(targetSkin === 'legend4') { ctx.globalCompositeOperation = 'lighter'; ctx.shadowBlur = 30 + Math.random() * 10; ctx.shadowColor = '#ffd700'; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(seg.x, seg.y, SNAKE_WIDTH/2, 0, Math.PI*2); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; 
+                    distAcc -= SEGMENT_SPACING; drawnCount++; if (drawnCount >= targetSnake.length) break; continue; }
+                else { ctx.fillStyle = 'white'; }
+
+                if(targetSkin !== 'legend1' && targetSkin !== 'legend2' && targetSkin !== 'legend3' && targetSkin !== 'legend4') {
+                    ctx.beginPath(); ctx.arc(seg.x, seg.y, SNAKE_WIDTH/2, 0, Math.PI*2); ctx.fill();
+                }
+                ctx.shadowBlur = 0; 
+                
+                distAcc -= SEGMENT_SPACING;
+                drawnCount++;
+                
+                if (drawnCount >= targetSnake.length) break;
+            }
+        }
+
+        ctx.save(); ctx.translate(targetSnake.x, targetSnake.y); ctx.rotate(targetSnake.angle);
+        
+        if(targetSkin === 'default') ctx.fillStyle = '#ff9933';
+        else if(targetSkin === 'red') ctx.fillStyle = '#ff0000';
+        else if(targetSkin === 'black') ctx.fillStyle = '#000000';
+        else if(targetSkin === 'orange') ctx.fillStyle = '#ff8800';
+        else if(targetSkin === 'purple') ctx.fillStyle = '#800080';
+        else if(targetSkin === 'yellow') ctx.fillStyle = '#ffeb3b';
+        else if(targetSkin === 'green') ctx.fillStyle = '#4caf50';
+        else if(targetSkin === 'pink') ctx.fillStyle = '#e91e63';
+        else if(targetSkin === 'gold') { ctx.fillStyle = '#ffd700'; ctx.shadowBlur = 15; ctx.shadowColor='white'; }
+        else if(targetSkin === 'rangoli') ctx.fillStyle = '#fff';
+        else if(targetSkin === 'tiger') ctx.fillStyle = '#ff9900';
+        else if(targetSkin === 'peacock') ctx.fillStyle = '#000080';
+        else if(targetSkin === 'kaleidoscope') ctx.fillStyle = `hsl(${(Date.now() * 0.1) % 360}, 70%, 50%)`;
+        else if(targetSkin === 'legend1') { ctx.fillStyle = '#000'; ctx.shadowColor = '#00ffff'; ctx.shadowBlur = 20; ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 3; ctx.stroke(); }
+        else if(targetSkin === 'legend2') { ctx.fillStyle = '#fff'; ctx.shadowColor = '#ff00cc'; ctx.shadowBlur = 30; }
+        else if(targetSkin === 'legend3') { ctx.fillStyle = '#000'; ctx.shadowColor = '#ff0000'; ctx.shadowBlur = 30; ctx.strokeStyle = '#ff0000'; ctx.lineWidth = 2; ctx.stroke(); }
+        else if(targetSkin === 'legend4') { ctx.fillStyle = '#fff'; ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 40; }
+
+        ctx.beginPath(); ctx.arc(0, 0, SNAKE_WIDTH/2 + 2, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(6, -6, 5, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(6, 6, 5, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'black'; ctx.beginPath(); ctx.arc(8, -6, 2, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(8, 6, 2, 0, Math.PI*2); ctx.fill();
+        
+        // MAGNET VISUAL ON HEAD
+        if (targetSnake === snake && magnetActive) {
+            ctx.strokeStyle = '#d32f2f'; // Red magnet color
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(0, -10, 8, Math.PI, 0); // U shape
+            ctx.lineTo(8, -5);
+            ctx.moveTo(-8, -10);
+            ctx.lineTo(-8, -5);
+            ctx.stroke();
+            // Silver Tips
+            ctx.fillStyle = '#c0c0c0';
+            ctx.fillRect(-10, -5, 4, 4);
+            ctx.fillRect(6, -5, 4, 4);
+        }
+
+        ctx.restore();
+        ctx.globalAlpha = 1.0; // Reset Alpha
+    }
+    
+    function startShopLoop() {
+        const cx = 100; const cy = 100;
+        previewSnake = { x: cx, y: cy, angle: 0, history: [], length: 12 };
+        for(let i=0; i<12*SEGMENT_DISTANCE; i++) previewSnake.history.push({x:cx, y:cy});
+        shopLoop();
+    }
+    
+    function shopLoop() {
+        if(skinScreen.classList.contains('hidden')) return;
+        const t = Date.now() * 0.002;
+        const cx = 100; const cy = 100;
+        const newX = cx + Math.cos(t) * 50; const newY = cy + Math.sin(t * 2) * 20;
+        const dx = newX - previewSnake.x; const dy = newY - previewSnake.y;
+        previewSnake.angle = Math.atan2(dy, dx); previewSnake.x = newX; previewSnake.y = newY;
+        previewSnake.history.unshift({x: previewSnake.x, y: previewSnake.y});
+        if(previewSnake.history.length > previewSnake.length * SEGMENT_DISTANCE + 5) previewSnake.history.pop();
+        
+        shopCtx.clearRect(0,0,200,200);
+        shopCtx.strokeStyle = 'rgba(255,215,0,0.1)'; shopCtx.lineWidth = 1; shopCtx.beginPath();
+        for(let i=0; i<200; i+=20) { shopCtx.moveTo(i,0); shopCtx.lineTo(i,200); shopCtx.moveTo(0,i); shopCtx.lineTo(200,i); }
+        shopCtx.stroke();
+        
+        if(selectedShopSkin) { drawSnake(shopCtx, previewSnake, selectedShopSkin.id); }
+        shopAnimationId = requestAnimationFrame(shopLoop);
+    }
+
+    function drawWeatherEffect(ctx, width, height) {
+        weatherParticles.forEach(p => {
+            ctx.beginPath();
+            if (currentMap === 'gateway') {
+                ctx.strokeStyle = 'rgba(174, 194, 224, 0.6)'; ctx.lineWidth = 1.5; ctx.moveTo(p.x, p.y); ctx.lineTo(p.x, p.y + p.len); ctx.stroke();
+                p.y += p.speed;
+            } else {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'; ctx.arc(p.x, p.y, p.radius, 0, Math.PI*2); ctx.fill();
+                p.y += p.speed; p.x += Math.sin(p.sway) * 0.5; p.sway += 0.05;
+            }
+            if(p.y > height) { p.y = -20; p.x = Math.random() * width; }
+        });
+    }
+    
+    function initLobbyAnim() { }
+    
+    function drawLobbyAnim() {
+        const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        grad.addColorStop(0, '#4a0e0e'); grad.addColorStop(1, '#1a0505');
+        ctx.fillStyle = grad; ctx.fillRect(0,0, canvas.width, canvas.height);
+        
+        ctx.save(); ctx.translate(canvas.width / 2, canvas.height / 2);
+        const time = Date.now() * 0.0005;
+        
+        ctx.rotate(time); ctx.strokeStyle = 'rgba(255, 215, 0, 0.1)'; ctx.lineWidth = 2;
+        for(let i=0; i<12; i++) { ctx.rotate((Math.PI * 2) / 12); ctx.beginPath(); ctx.arc(200, 0, 80, 0, Math.PI * 2); ctx.stroke(); }
+        
+        ctx.rotate(-time * 2); ctx.strokeStyle = 'rgba(255, 153, 51, 0.15)'; 
+        for(let i=0; i<8; i++) { ctx.rotate((Math.PI * 2) / 8); ctx.beginPath(); ctx.moveTo(100, 0); ctx.quadraticCurveTo(150, 50, 100, 100); ctx.quadraticCurveTo(50, 50, 100, 0); ctx.stroke(); }
+        ctx.restore();
+        
+        ctx.fillStyle = 'rgba(255, 200, 50, 0.4)';
+        for(let i=0; i<20; i++) {
+            const x = (Math.sin(i + time) * canvas.width/2) + canvas.width/2;
+            const y = (Math.cos(i * 1.5 + time) * canvas.height/2) + canvas.height/2;
+            ctx.beginPath(); ctx.arc(x, y, 3 + Math.sin(time * 5 + i)*2, 0, Math.PI * 2); ctx.fill();
+        }
+    }
+
+    let time = 0; 
+
+    function draw() {
+        if (!isRunning) { drawLobbyAnim(); return; }
+        
+        const now = performance.now(); const delta = now - lastTime; lastTime = now;
+        frameCount++; fpsTimer += delta;
+        if(fpsTimer >= 1000) { fpsEl.innerText = frameCount; frameCount = 0; fpsTimer = 0; }
+        time += 1; 
+
+        // --- BACKGROUND OUTSIDE BORDER (VOID) ---
+        let voidGradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+        
+        if (currentMap === 'gateway') {
+            voidGradient.addColorStop(0, '#FF8C00'); // Dark Orange
+            voidGradient.addColorStop(0.5, '#FFD700'); // Gold/Yellow
+            voidGradient.addColorStop(1, '#FF4500'); // Orange Red
+        } else {
+            voidGradient.addColorStop(0, '#006400'); // Rich Green
+            voidGradient.addColorStop(0.5, '#228B22'); // Forest Green
+            voidGradient.addColorStop(1, '#FF9933'); // Saffron
+        }
+        
+        ctx.fillStyle = voidGradient; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // --------------------------------------
+
+        ctx.save();
+        
+        // --- CAMERA LOGIC (Includes Magnify/Zoom) ---
+        let camX, camY;
+        let centerX = window.innerWidth / 2;
+        let centerY = window.innerHeight / 2;
+        
+        // Apply Zoom (Scale from center of screen)
+        ctx.translate(centerX, centerY);
+        ctx.scale(currentZoom, currentZoom);
+        ctx.translate(-centerX, -centerY);
+        
+        if(isRunning) { 
+            camX = -snake.x + centerX; 
+            camY = -snake.y + centerY; 
+        } else { 
+            camX = -WORLD_SIZE/2 + centerX; 
+            camY = -WORLD_SIZE/2 + centerY; 
+        }
+        
+        ctx.translate(camX, camY);
+
+        // --- MAP RENDERING UPDATED ---
+        if (currentMap === 'gateway') {
+            // Maharashtra: Warli Art on Red Earth
+            ctx.fillStyle = '#A0522D'; // Sienna/Red Earth
+            ctx.fillRect(0, 0, WORLD_SIZE, WORLD_SIZE);
+            
+            // Texture Lines
+            ctx.strokeStyle = 'rgba(139, 69, 19, 0.2)'; ctx.lineWidth = 40; ctx.beginPath();
+            for(let i=0; i<WORLD_SIZE; i+=200) { ctx.moveTo(i, 0); ctx.lineTo(i+100, WORLD_SIZE); }
+            ctx.stroke();
+
+            // Warli Patterns (Varied Shapes)
+            ctx.fillStyle = 'rgba(255, 255, 240, 0.8)'; // Rice paste white - Higher Opacity
+            ctx.strokeStyle = 'rgba(255, 255, 240, 0.8)';
+            ctx.lineWidth = 2;
+
+            for (let x = 100; x < WORLD_SIZE; x += 300) {
+                for (let y = 100; y < WORLD_SIZE; y += 300) {
+                    let shapeType = (x + y) % 4; // Use 4 variations
+
+                    ctx.save();
+                    ctx.translate(x, y);
+
+                    if (shapeType === 0) {
+                        // 1. Dancing Men (Two Triangles) - Classic
+                        ctx.beginPath();
+                        ctx.moveTo(0, -10); ctx.lineTo(-8, 5); ctx.lineTo(8, 5); ctx.closePath();
+                        ctx.moveTo(0, -10); ctx.lineTo(-8, -25); ctx.lineTo(8, -25); ctx.closePath();
+                        ctx.fill();
+                        ctx.beginPath(); ctx.arc(0, -30, 4, 0, Math.PI*2); ctx.fill();
+                        ctx.beginPath(); ctx.moveTo(0, 5); ctx.lineTo(-5, 15); ctx.moveTo(0, 5); ctx.lineTo(5, 15); ctx.stroke();
+                    } else if (shapeType === 1) {
+                        // 2. Warli Hut (New - Replaces Clock)
+                        ctx.beginPath();
+                        // Roof
+                        ctx.moveTo(-20, -10); ctx.lineTo(0, -35); ctx.lineTo(20, -10); ctx.closePath(); ctx.fill();
+                        // Walls
+                        ctx.rect(-15, -10, 30, 25); ctx.stroke();
+                        // Door
+                        ctx.fillRect(-5, 0, 10, 15); 
+                    } else if (shapeType === 2) {
+                        // 3. Tree / Plant - Classic
+                        ctx.beginPath();
+                        ctx.moveTo(0, 20); ctx.lineTo(0, -20);
+                        ctx.moveTo(0, 0); ctx.lineTo(-15, -15);
+                        ctx.moveTo(0, -5); ctx.lineTo(15, -20);
+                        ctx.moveTo(0, 10); ctx.lineTo(-10, 0);
+                        ctx.moveTo(0, 10); ctx.lineTo(10, 0);
+                        ctx.stroke();
+                    } else {
+                        // 4. Warli Sun (New)
+                        ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI*2); ctx.fill();
+                        for(let k=0; k<8; k++) {
+                            ctx.rotate(Math.PI/4);
+                            ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(20, 0); ctx.stroke();
+                        }
+                    }
+                    ctx.restore();
+                }
+            }
+            
+            // Border
+            ctx.strokeStyle = '#DAA520'; ctx.lineWidth = 20;
+            ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
+
+        } else {
+            // Himalaya: Kashmir (Dark Blue Background for Snow Visibility)
+            ctx.fillStyle = '#3E606F'; // Steel/Kashmiri Blue - Dark enough for white snow
+            ctx.fillRect(0, 0, WORLD_SIZE, WORLD_SIZE);
+            
+            // Kashmiri Motifs (Distinct colors and shapes)
+            for (let x = 150; x < WORLD_SIZE; x += 300) {
+                for (let y = 150; y < WORLD_SIZE; y += 300) {
+                    let shapeType = (x + y) % 3;
+                    
+                    ctx.save(); ctx.translate(x, y);
+                    
+                    if (shapeType === 0) {
+                        // 1. Chinar Leaf (Maple-like) - Reddish Brown
+                        ctx.fillStyle = 'rgba(165, 42, 42, 0.6)'; // Higher Opacity
+                        ctx.beginPath();
+                        ctx.moveTo(0, -25); 
+                        ctx.lineTo(15, -5); ctx.lineTo(30, -15); ctx.lineTo(20, 5);
+                        ctx.lineTo(35, 20); ctx.lineTo(10, 15); ctx.lineTo(0, 35);
+                        ctx.lineTo(-10, 15); ctx.lineTo(-35, 20); ctx.lineTo(-20, 5);
+                        ctx.lineTo(-30, -15); ctx.lineTo(-15, -5);
+                        ctx.closePath(); ctx.fill();
+                    } else if (shapeType === 1) {
+                        // 2. Paisley / Ambi (Mango Shape) - Gold
+                        ctx.fillStyle = 'rgba(255, 215, 0, 0.6)'; // Higher Opacity
+                        ctx.beginPath();
+                        ctx.moveTo(0, 20);
+                        ctx.bezierCurveTo(25, 20, 25, -20, 0, -30);
+                        ctx.bezierCurveTo(-20, -20, -30, 0, -10, 15);
+                        ctx.bezierCurveTo(-5, 20, 0, 20, 0, 20);
+                        ctx.fill();
+                    } else {
+                        // 3. Lotus (New - Replaces Star) - Pink
+                        ctx.fillStyle = 'rgba(255, 105, 180, 0.6)'; 
+                        ctx.beginPath();
+                        // Petals
+                        ctx.ellipse(0, -15, 8, 15, 0, 0, Math.PI*2); 
+                        ctx.ellipse(15, 0, 15, 8, 0, 0, Math.PI*2);
+                        ctx.ellipse(0, 15, 8, 15, 0, 0, Math.PI*2);
+                        ctx.ellipse(-15, 0, 15, 8, 0, 0, Math.PI*2);
+                        ctx.fill();
+                        ctx.fillStyle = '#ffcc00'; ctx.beginPath(); ctx.arc(0,0,5,0,Math.PI*2); ctx.fill(); // Center
+                    }
+                    
+                    ctx.restore();
+                }
+            }
+            
+            // Border
+            ctx.strokeStyle = '#2F4F4F'; ctx.lineWidth = 20; ctx.strokeRect(0, 0, WORLD_SIZE, WORLD_SIZE);
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 5; ctx.strokeRect(20, 20, WORLD_SIZE-40, WORLD_SIZE-40);
+        }
+
+        ctx.lineWidth = 15;
+        
+        foods.forEach(f => {
+            ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 0; // Shadow handled manually now
+            if(f.name === 'Modak') drawModak(ctx, f.x, f.y, f.radius);
+            else if(f.name === 'Vada Pav') drawVadaPav(ctx, f.x, f.y, f.radius);
+            else if(f.name === 'Laddu') drawLaddu(ctx, f.x, f.y, f.radius);
+            else if(f.name === 'Misal Pav') drawMisalPav(ctx, f.x, f.y, f.radius); // New
+            else if(f.name === 'Fried Momo') drawFriedMomo(ctx, f.x, f.y, f.radius);
+            else if(f.name === 'Sel Roti') drawSelRoti(ctx, f.x, f.y, f.radius); // New
+            else if(f.name === 'Thukpa') drawThukpa(ctx, f.x, f.y, f.radius); // New
+            else if(f.name === 'Aloo Dum') drawAlooDum(ctx, f.x, f.y, f.radius); // New
+            else if(f.name === 'Coin') drawCoin(ctx, f.x, f.y, f.radius);
+            else if(f.name === 'MiniModak') drawModak(ctx, f.x, f.y, f.radius); // FIXED: Draw modak for trail
+        });
+
+        enemies.forEach(bot => {
+            drawSnake(ctx, bot, bot.skin);
+            ctx.fillStyle = 'white'; ctx.font = 'bold 16px Poppins'; ctx.textAlign = 'center'; ctx.fillText(bot.name, bot.x, bot.y - 30);
+        });
+
+        drawSnake(ctx, snake, currentSkin);
+        ctx.fillStyle = 'lime'; ctx.font = 'bold 16px Poppins'; ctx.textAlign = 'center'; ctx.fillText(playerName, snake.x, snake.y - 30);
+        
+        const img = (currentMap === 'gateway') ? gatewayImage : himalayaImage;
+        // Only draw if image is valid (width > 0)
+        if (img.complete && img.naturalWidth > 0) {
+            const gwX = WORLD_SIZE / 2; const gwY = 50; const size = 600;
+            ctx.save(); ctx.translate(gwX, gwY); ctx.transform(1, 0, 0, -0.6, 0, 0); 
+            ctx.filter = 'brightness(0) blur(4px)'; ctx.globalAlpha = 0.4; 
+            ctx.drawImage(img, -size/2, -size, size, size); ctx.restore();
+            ctx.drawImage(img, gwX - size/2, gwY - size + 20, size, size);
+        } else {
+            const t = TRANSLATIONS[currentLang];
+            ctx.fillStyle = 'white'; ctx.font = '30px Poppins'; ctx.textAlign = 'center';
+            ctx.fillText(currentMap === 'gateway' ? t.mapGateway : t.mapHimalaya, WORLD_SIZE/2, -100);
+        }
+
+        ctx.restore(); 
+        drawWeatherEffect(ctx, canvas.width, canvas.height);
+
+        if(isRunning) {
+            miniCtx.clearRect(0, 0, 150, 150);
+            miniCtx.fillStyle = 'rgba(0,0,0,0.5)'; miniCtx.fillRect(0,0,150,150);
+            miniCtx.fillStyle = 'rgba(255,255,255,0.6)'; foods.forEach(f => { miniCtx.fillRect((f.x/WORLD_SIZE)*120, (f.y/WORLD_SIZE)*120, 2, 2); });
+            miniCtx.fillStyle = '#ff0000'; enemies.forEach(bot => { const ex = (bot.x / WORLD_SIZE) * 120; const ey = (bot.y / WORLD_SIZE) * 120; miniCtx.beginPath(); miniCtx.arc(ex, ey, 2.5, 0, Math.PI*2); miniCtx.fill(); });
+            const mapX = (snake.x / WORLD_SIZE) * 120; const mapY = (snake.y / WORLD_SIZE) * 120;
+            miniCtx.fillStyle = '#0f0'; miniCtx.beginPath(); miniCtx.arc(mapX, mapY, 3, 0, Math.PI*2); miniCtx.fill();
+        }
+    }
+
+    let lastFrameTime = 0;
+    const targetFPS = 60;
+    const frameInterval = 1000 / targetFPS;
+
+    function loop(timestamp) {
+        animationId = requestAnimationFrame(loop);
+        const elapsed = timestamp - lastFrameTime;
+        if (elapsed > frameInterval) {
+            lastFrameTime = timestamp - (elapsed % frameInterval);
+            update();
+            draw();
+        }
+    }
+    
+    // Initialize Language UI immediately
+    updateLanguageUI();
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+        if(btn.dataset.lang === currentLang) btn.classList.add('active');
+        else btn.classList.remove('active');
+    });
+
+    initLobbyAnim();
+    resetEntities(); 
+    loop(0); 
+    
+</script>
+</body>
+</html>
